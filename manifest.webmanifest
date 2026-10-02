@@ -1,0 +1,17 @@
+{
+  "name": "Pal Pop - Live Techno Arcade",
+  "short_name": "Pal Pop",
+  "description": "Drop, merge and evolve pixel pals in a mobile-first neon arcade with a live-generated techno soundtrack.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#161027",
+  "theme_color": "#1a0b3d",
+  "categories": ["games"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

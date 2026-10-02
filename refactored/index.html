@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1a0b3d" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Pal Pop" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <title>Pal Pop — Live Music Arcade</title>
+    <meta
+      name="description"
+      content="Drop, merge, and evolve your pixel pals in a mobile-first neon arcade with evolving electro, festival house and techno soundtracks."
+    />
+    <!-- Press Start 2P: assets/fonts/OFL.txt -->
+    <link rel="stylesheet" href="styles/game.css" />
+  </head>
+  <body>
+    <aside class="side-note left" aria-label="Pal Pop arcade">
+      <div class="eyebrow">LIVE IN YOUR BROWSER</div>
+      <h1>PAL<br /><span>POP</span></h1>
+      <canvas id="cabinetPal" width="128" height="128" aria-hidden="true"></canvas>
+      <div class="pixel-rule"></div>
+      <p>DROP. MERGE. EVOLVE.<br />REACH THE SUN!</p>
+      <p class="live-tip">FESTIVAL. ELECTRO. TECHNO.<br />FIND YOUR GROOVE.</p>
+      <p class="tiny">PIANO HOOKS, SYNTHS AND ACID LINES.<br />YOUR SOUNDTRACK KEEPS EVOLVING.</p>
+    </aside>
+    <aside class="side-note right" aria-label="How to play">
+      <div class="eyebrow">HOW TO PLAY</div>
+      <p>DRAG TO AIM.<br />RELEASE TO DROP.<br />MERGE MATCHING PALS.</p>
+      <div class="pixel-rule"></div>
+      <div class="key-row"><span>MOVE</span><kbd>LEFT/RIGHT</kbd></div>
+      <div class="key-row"><span>DROP</span><kbd>SPACE</kbd></div>
+      <div class="key-row"><span>SWAP</span><kbd>S</kbd></div>
+      <div class="key-row"><span>SOUND</span><kbd>M</kbd></div>
+      <div class="pixel-rule"></div>
+      <p class="live-tip">THREE SOUNDTRACKS.<br />CHOOSE YOUR GROOVE.</p>
+      <p class="tiny">PICK YOUR SONG IN SOUND.<br />THE MUSIC FLOWS BETWEEN GAMES.</p>
+    </aside>
+    <div id="app">
+      <header class="masthead">
+        <div class="brand">PAL<b>POP</b></div>
+        <div class="edition">LIVE MUSIC<br />MOBILE EDITION</div>
+      </header>
+      <div id="hud">
+        <div class="stat"><span class="lbl">SCORE</span><span id="score" class="val">0</span></div>
+        <button
+          id="nextBtn"
+          class="pbtn nextbtn"
+          aria-label="Next pal. Tap to swap with the one you are holding"
+        >
+          <span class="lbl">NEXT</span><canvas id="nextCv"></canvas>
+        </button>
+        <div class="stat r"><span class="lbl">BEST</span><span id="best" class="val">0</span></div>
+      </div>
+      <div id="goal" aria-live="polite">
+        <canvas id="goalCv"></canvas><span id="goalTxt">MAKE 3 BUNBUN</span
+        ><span id="goalNum">0/3</span><i id="goalBar"></i>
+      </div>
+      <div id="liveStrip" aria-label="Live soundtrack status">
+        <div class="live-title">
+          <span class="live-dot" aria-hidden="true"></span><span id="liveGenre">LIVE DANCE</span
+          ><small id="liveMixState" role="status">READY TO PLAY</small>
+        </div>
+        <span id="liveClock">LIVE</span>
+      </div>
+      <div id="stemMeter" aria-label="Currently audible music layers">
+        <span data-stem="kick">KICK</span><span data-stem="bass">BASS</span
+        ><span data-stem="drums">DRUMS</span><span data-stem="synth">SYNTH</span>
+      </div>
+      <div id="stage">
+        <div id="wrap">
+          <canvas
+            id="game"
+            width="120"
+            height="200"
+            tabindex="0"
+            role="application"
+            aria-label="Pal Pop. Left and right arrows to aim, Space to start or drop, S to swap, M for music, B for collection."
+          ></canvas>
+          <div id="title" class="ovl">
+            <div class="logo ol">
+              <span class="a"
+                ><i style="--i: 0">P</i><i style="--i: 1">A</i><i style="--i: 2">L</i></span
+              ><span class="b"
+                ><i style="--i: 3">P</i><i style="--i: 4">O</i><i style="--i: 5">P</i></span
+              >
+            </div>
+            <p class="tag ol">MERGE TWO PALS<br />EVOLVE THEM ALL<br />REACH THE SUN</p>
+            <p class="tap ol">TAP TO PLAY</p>
+            <p class="np ol">
+              <span id="tLvl">LV 1 ROOKIE</span><br /><span id="tNp">NEON CIRCUIT</span>
+            </p>
+          </div>
+          <div id="over" class="ovl" hidden>
+            <div class="panel">
+              <div class="ttl">GAME OVER</div>
+              <canvas id="goCv"></canvas>
+              <div class="reach">BEST PAL: <b id="goName">BLIPP</b></div>
+              <div class="big" id="goScore">0</div>
+              <div class="sub" id="goBest">BEST 0</div>
+              <div class="newbest" id="goNew" hidden>NEW BEST!</div>
+              <div class="lvlbox">
+                <div class="lvlrow">
+                  <span id="goLvl">LV 1 ROOKIE</span><span id="goXpTxt">+0 XP</span>
+                </div>
+                <div class="xpbar"><i id="goXp"></i></div>
+              </div>
+              <div id="goUp" hidden>LEVEL UP!</div>
+              <div id="goUnlock" hidden>
+                <canvas id="goUnCv"></canvas><span id="goUnTxt"></span>
+              </div>
+              <button id="againBtn" class="pbtn primary">PLAY AGAIN</button>
+              <button id="shareBtn" class="pbtn">SHARE SCORE</button>
+            </div>
+          </div>
+          <div id="toast" role="status"></div>
+        </div>
+      </div>
+      <div class="chain-label"><span>THE EVOLUTION</span><span>REACH THE SUN</span></div>
+      <div id="ladder" aria-label="Evolution chain"></div>
+      <div id="bar">
+        <button id="shakeBtn" class="pbtn" aria-label="Shake the box. Charges with merges">
+          <span id="shakeFill"></span><span id="shakeTxt">SHAKE</span>
+        </button>
+        <button id="bookBtn" class="pbtn" aria-label="Palbook: your pal collection">PALS</button>
+        <button id="sndBtn" class="pbtn" aria-label="Music tracks and sound settings">SOUND</button>
+      </div>
+      <div class="now-playing">
+        <span class="mini-eq" aria-hidden="true"><i></i><i></i><i></i></span
+        ><span id="trackLabel">NEON CIRCUIT</span><span id="tempoLabel">130 BPM</span>
+      </div>
+    </div>
+    <div id="book" hidden>
+      <div class="sheet" role="dialog" aria-modal="true" aria-label="Palbook">
+        <h2 id="bookTitle">PALBOOK</h2>
+        <div class="grid" id="bookGrid"></div>
+        <p class="binfo" id="bookInfo">TAP A PAL</p>
+        <div class="row"><button id="labBtn" class="pbtn">PIXEL LAB</button></div>
+        <button id="bookClose" class="pbtn primary">BACK TO GAME</button>
+      </div>
+    </div>
+    <div id="radio" hidden>
+      <div class="sheet" role="dialog" aria-modal="true" aria-label="Sound settings">
+        <h2>CHOOSE YOUR SOUNDTRACK</h2>
+        <div id="songChoices" class="song-picker" role="group" aria-label="Choose a song"></div>
+        <div class="engine-card" aria-label="Live soundtrack information">
+          <div class="engine-badge">LIVE</div>
+          <div>
+            <b id="engineName">NEON CIRCUIT</b
+            ><small id="engineInfo">ONE EVOLVING, ENDLESS SET</small>
+          </div>
+        </div>
+        <div class="mixer">
+          <label class="mix-control" for="musicVol"
+            >Music<input id="musicVol" type="range" min="0" max="100" step="1" /><output
+              id="musicValue"
+              for="musicVol"
+            ></output
+          ></label>
+          <label class="mix-control" for="bassAmt"
+            >Bass<input id="bassAmt" type="range" min="0" max="100" step="1" /><output
+              id="bassValue"
+              for="bassAmt"
+            ></output
+          ></label>
+          <label class="mix-control" for="effectsVol"
+            >Effects<input id="effectsVol" type="range" min="0" max="100" step="1" /><output
+              id="effectsValue"
+              for="effectsVol"
+            ></output
+          ></label>
+          <p class="mix-note" id="songDescription">
+            PUMPING FOUR-ON-THE-FLOOR ELECTRO. SAW SYNTHS, SYNCOPATED BASS AND FRESH EIGHT-BAR
+            PHRASES. THE HARMONY AND ARRANGEMENT KEEP REGENERATING.
+          </p>
+        </div>
+        <div class="row"><button id="musTog" class="pbtn">SOUND ON</button></div>
+        <p class="credit">
+          ALL THREE SONGS ARE PLAYED LIVE AND KEEP EVOLVING. YOUR SONG CHOICE IS SAVED. RETRY
+          WITHOUT LOSING THE BEAT.
+        </p>
+        <button id="radioClose" class="pbtn primary">BACK TO GAME</button>
+      </div>
+    </div>
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>

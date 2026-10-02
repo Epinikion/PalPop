@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pal Pop module audio checks</title>
+    <style>
+      body {
+        background: #161027;
+        color: #f2eaff;
+        font: 16px/1.5 monospace;
+        max-width: 850px;
+        margin: 2rem auto;
+        padding: 1rem;
+      }
+      button {
+        padding: 1rem;
+        font: inherit;
+      }
+      pre {
+        white-space: pre-wrap;
+      }
+      a {
+        color: #94f09a;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Pal Pop audio rendering checks</h1>
+    <p>
+      Offline renders exercise the real graph, instruments, composition, and arrangement modules.
+    </p>
+    <button id="run">RUN AUDIO CHECKS</button>
+    <p>
+      <label for="previewTrack">Preview soundtrack</label>
+      <select id="previewTrack"></select>
+    </p>
+    <button id="preview">RENDER TRACK PREVIEW</button>
+    <button id="gameplay">RENDER MUSIC + GAMEPLAY PREVIEW</button>
+    <p><audio id="previewAudio" controls hidden></audio></p>
+    <a id="download" download="preview.wav" hidden>Download track preview</a>
+    <pre id="result" role="status">Ready.</pre>
+    <a href="../">Back to game</a>
+    <script type="module" src="audio-check.js"></script>
+  </body>
+</html>
