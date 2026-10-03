@@ -5,6 +5,8 @@ import { createFestival } from './instruments/festival.js';
 import { createTransitions } from './instruments/transitions.js';
 import { createSupersaw } from './instruments/supersaw.js';
 import { createVocal } from './instruments/vocal.js';
+import { createKit } from './instruments/kit.js';
+import { createWarehouse } from './instruments/warehouse.js';
 /** Shared voice interface used by arrangements and gameplay accents. */
 export function createAudioInstruments(dependencies) {
   return {
@@ -15,5 +17,7 @@ export function createAudioInstruments(dependencies) {
     ...createTransitions(dependencies),
     eSawPluck: createSupersaw(dependencies).eSawPluck,
     ...createVocal(dependencies),
+    ...createKit(dependencies),
+    ...createWarehouse(dependencies),
   };
 }

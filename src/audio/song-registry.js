@@ -10,8 +10,20 @@ import {
 import { createAudioFestival } from './festival.js';
 import { composeVocalSession, renewVocalChapter, VOCAL_FORMS } from './songs/vocal-composition.js';
 import { createAudioVocal } from './vocal.js';
+import {
+  composeWarehouseSession,
+  renewWarehouseChapter,
+  WAREHOUSE_FORMS,
+} from './songs/warehouse-composition.js';
+import { createAudioWarehouse } from './warehouse.js';
 /** One registry connects a style's composition, chapter renewal, and arrangement. */
 export const SONG_STYLES = Object.freeze({
+  warehouse: {
+    compose: composeWarehouseSession,
+    renewChapter: renewWarehouseChapter,
+    introForm: WAREHOUSE_FORMS[0],
+    createArrangement: (deps) => createAudioWarehouse(deps).scheduleWarehouseStep,
+  },
   vocal: {
     compose: composeVocalSession,
     renewChapter: renewVocalChapter,

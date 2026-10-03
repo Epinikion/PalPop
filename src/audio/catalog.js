@@ -2,8 +2,19 @@ const DANCE = 5;
 const TECHNO = 6;
 const FESTIVAL = 7;
 const VOCAL = 8;
+const WAREHOUSE = 9;
 const VISUAL_THEME = 6;
 const TRACKS = {
+  [WAREHOUSE]: {
+    buttonId: 'warehouseTrack',
+    label: 'TECHNO / HARD KICK + RUMBLE + PERCUSSION',
+    name: 'WAREHOUSE',
+    style: 'warehouse',
+    trim: 1.1,
+    bpm: 135,
+    description:
+      'DARK, HYPNOTIC TECHNO BUILT ON A HARD KICK, A ROLLING RUMBLE AND LAYERED PERCUSSION THAT DRIFTS AGAINST THE BEAT. LONG BUILDS, BRUTAL DROPS, VERY LITTLE SYNTH.',
+  },
   [VOCAL]: {
     buttonId: 'vocalTrack',
     label: 'MELODIC HOUSE / SUNG HOOKS + PIANO',
@@ -47,4 +58,4 @@ const TRACKS = {
   },
 };
 const TRACK_IDS = Object.keys(TRACKS).map(Number);
-export { DANCE, TECHNO, FESTIVAL, VOCAL, VISUAL_THEME, TRACK_IDS, TRACKS };
+export { DANCE, TECHNO, FESTIVAL, VOCAL, WAREHOUSE, VISUAL_THEME, TRACK_IDS, TRACKS };

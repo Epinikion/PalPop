@@ -13,7 +13,7 @@ export const BANDS = [
 ];
 const db = (power) => (power > 1e-14 ? 10 * Math.log10(power) : -140);
 
-function fft(re, im) {
+export function fft(re, im) {
   const n = re.length;
   for (let i = 1, j = 0; i < n; i++) {
     let bit = n >> 1;

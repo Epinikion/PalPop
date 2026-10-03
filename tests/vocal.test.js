@@ -20,7 +20,7 @@ const KINDS = ['intro', 'verse', 'pre', 'chorus', 'bridge', 'outro'];
 test('the vocal song is registered with its own bus and a stable id', () => {
   assert.equal(VOCAL, 8);
   assert(TRACKS[VOCAL].vocals && TRACKS[VOCAL].style === 'vocal');
-  assert.equal(TRACK_IDS.at(-1), VOCAL);
+  assert(TRACK_IDS.includes(VOCAL));
 });
 
 test('vocal sessions are deterministic, hold key and tempo, and renew harmony every chapter', () => {
