@@ -13,77 +13,8 @@ import { sweepFor } from '../src/audio/sweep.js';
 import { composeFestivalPhrase } from '../src/audio/songs/festival-composition.js';
 import { TRACKS, TRACK_IDS } from '../src/audio/catalog.js';
 import { analyzeBars, decodeWav } from '../tools/analyze-wav.mjs';
-
-/** A recording stand-in for the Web Audio nodes the graph and voices use. */
-function fakeContext() {
-  const nodes = [];
-  const param = () => ({
-    value: 0,
-    calls: [],
-    setValueAtTime(value, time) {
-      this.calls.push(['set', value, time]);
-    },
-    linearRampToValueAtTime(value, time) {
-      this.calls.push(['linear', value, time]);
-    },
-    exponentialRampToValueAtTime(value, time) {
-      this.calls.push(['exp', value, time]);
-    },
-    setTargetAtTime(value, time, constant) {
-      this.calls.push(['target', value, time, constant]);
-    },
-    cancelScheduledValues() {},
-  });
-  const make = (kind, params = []) => {
-    const node = {
-      kind,
-      edges: [],
-      connect(target) {
-        this.edges.push(target);
-        return target;
-      },
-      disconnect() {
-        this.edges.length = 0;
-      },
-      start(time) {
-        this.startTime = time;
-      },
-      stop(time) {
-        this.endTime = time;
-      },
-    };
-    for (const name of params) node[name] = param();
-    nodes.push(node);
-    return node;
-  };
-  const destination = { kind: 'destination', edges: [] };
-  return {
-    nodes,
-    destination,
-    sampleRate: 48000,
-    currentTime: 0,
-    createGain: () => make('gain', ['gain']),
-    createBiquadFilter: () => make('biquad', ['frequency', 'Q', 'gain', 'detune']),
-    createDynamicsCompressor: () =>
-      make('compressor', ['threshold', 'knee', 'ratio', 'attack', 'release']),
-    createWaveShaper: () => make('shaper'),
-    createStereoPanner: () => make('panner', ['pan']),
-    createDelay: () => make('delay', ['delayTime']),
-    createConvolver: () => make('convolver'),
-    createChannelSplitter: () => make('splitter'),
-    createChannelMerger: () => make('merger'),
-    createAnalyser: () => make('analyser'),
-    createOscillator: () => make('oscillator', ['frequency', 'detune']),
-    createBufferSource: () => make('buffer', ['playbackRate']),
-    createBuffer: (channels, length) => ({ getChannelData: () => new Float32Array(length) }),
-  };
-}
-function reaches(from, target, seen = new Set()) {
-  if (from === target) return true;
-  if (seen.has(from)) return false;
-  seen.add(from);
-  return from.edges.some((next) => reaches(next, target, seen));
-}
+import { fakeContext, reaches } from './helpers/fake-audio.js';
+import { arrangement } from './helpers/arrangement.js';
 
 test('the master chain ends in a soft clipper and limiter that cannot exceed full scale', () => {
   const context = fakeContext(),
@@ -152,45 +83,6 @@ test('the DJ filter opens through intros, closes through builds and rests out of
   instruments.eSweep(2, 400);
   assert.deepEqual(audio.graph.song.sweep.frequency.calls, [[400, 2, 0.03]]);
 });
-
-function arrangement(style, seed = 42) {
-  const audio = createAudioState();
-  audio.trackId = TRACK_IDS.find((id) => TRACKS[id].style === style);
-  audio.seed = seed;
-  const comp = createAudioComposition({ audio });
-  audio.session = comp.composeSession(seed);
-  const events = [];
-  const param = { setValueAtTime() {}, linearRampToValueAtTime() {}, setTargetAtTime() {} };
-  audio.graph = {
-    song: { duck: { gain: param }, melLP: { frequency: param }, rum: { gain: param } },
-  };
-  const instruments = new Proxy(
-    {},
-    {
-      get:
-        (_, name) =>
-        (...args) =>
-          events.push({ name, args }),
-    },
-  );
-  const play = createArrangements({
-    audio,
-    game: { phase: 'play', goldTime: 0, comboCount: 0 },
-    audioComposition: comp,
-    audioInstruments: instruments,
-    audioMath: createAudioMath(audio),
-  })[style];
-  return {
-    audio,
-    comp,
-    bar(index) {
-      events.length = 0;
-      for (let step = 0; step < 16; step++)
-        play(index * 16 + step, (index * 16 + step) * audio.session.s16);
-      return events.slice();
-    },
-  };
-}
 
 for (const style of ['festival', 'dance', 'techno'])
   test(`${style}: builds sweep the filter upward and every drop snaps it open`, () => {

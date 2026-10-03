@@ -1,12 +1,13 @@
 # Pal Pop
 
-A pixel-art merge game with slippery physics, responsive electronic gameplay sounds and three continuously evolving Web Audio soundtracks:
+A pixel-art merge game with slippery physics, responsive electronic gameplay sounds and four continuously evolving Web Audio soundtracks:
 
 - **NEON CIRCUIT** — pumping electro with sidechained bass, supersaw stabs and plucked arpeggios.
 - **LIVE TECHNO** — rolling bass, acid lines and dub chords.
+- **GOLDEN HOUR** — melodic vocal house: warm, wordless sung melodies over piano, plucks and a soft four-on-the-floor, with verses, builds, sing-along choruses and a bridge.
 - **SKYLINE RUSH** — melodic festival house: piano, a seven-voice supersaw hook, DJ-style builds, silent beats before the drops and a piano breakdown that replays the theme.
 
-All three are mixed and mastered like records: about -13 LUFS at the default volume, glued by bus and master compression, with a wide synth bus, sidechain pumping and a high-pass sweep through intros and builds.
+All four are mixed and mastered like records: about -13 LUFS at the default volume, glued by bus and master compression, with a wide synth bus, sidechain pumping and a high-pass sweep through intros and builds.
 
 The game is written as native ES modules. Physics, game rules, rendering, interface, composition, arrangement and instrument synthesis are separate modules. There is no bundler and no runtime dependency.
 
@@ -108,6 +109,10 @@ The scheduler dispatches through the registry. The chapter cache retains at most
 
 SKYLINE RUSH (`FESTIVAL`, ID 7) is melodic festival house at 126–128 BPM. Its major scale and relative-minor progressions hold each chord for two bars. Piano and an original saw hook answer each other, with the first drop after eight bars. PEAK plays A / varied A and FINAL plays B / exact A reprise; each chapter renews the theme from multiple contours and rhythm families. Breaks and builds omit the lead. Its dedicated piano/saw instruments, gameplay piano replies and brightness limits are isolated from the other two tracks. Keep the four-phrase and three-chapter caches bounded.
 
+GOLDEN HOUR (`VOCAL`, ID 8) is melodic vocal house at 120–124 BPM in a minor or major key. Its form is a real song: intro, verse, pre-chorus build, chorus, bridge, second build, final chorus and outro, in 64-bar chapters whose later forms rotate (one opens on the chorus). One chord per bar over four-chord loops; the intro and outro share the chorus chords because they tease its hook. `src/audio/songs/vocal-composition.js` writes the sung lines: the lead stays between G3 and E5 so it never turns shrill, held notes on strong beats are chord tones, passing notes move by step, leaps are rare, verses leave whole bars empty, and the chorus hook returns unchanged in both of its phrases and in every chorus (only the cadence changes, and the final chorus lifts its last note). `src/audio/vocal.js` arranges it: a lead, a doubled take, a tenor an octave below and a third above in later choruses, an "ooh" choir in the bridge, and an instrumental part that reuses the festival piano, saw plucks and supersaw chords. Vocals drop out while the game is in danger, and the bar before a chorus goes silent on its last beat.
+
+The voice (`src/audio/instruments/vocal.js`) is synthesized, not recorded: a smooth harmonic source passes four parallel vowel formants (alto and tenor tables), with a late-arriving vibrato of about 5 Hz and 25 cents, slow pitch drift, a breath that is strongest at the start of a note, a soft attack, scoops into phrases and fall-offs at their ends, legato glides between joined notes and a loudness normalisation so every vowel and pitch sits at the same level. It sings wordless syllables ("ooh", "ah", "oh", "la", "na", hums), because real words need recordings. Lead and backing vocals share their own bus with a low cut, a boxy-range dip, a presence lift, a de-esser, a soft top and a compressor, and the kick ducks that bus only about a third as much as the synths.
+
 ### Mix and mastering
 
 Signal flow: voices feed the dry, bass and synth buses of the current song. The kick ducks the bass and synth buses (instant dip, exponential recovery). The synth bus passes a mid/side widener whose side signal is high-passed at 220 Hz, so bass and low mids stay centred and the mix still folds down cleanly to mono. Each song's output passes its loudness `trim` and the DJ high-pass, then the shared music bus: low cut, bass shelf, presence and air EQ, soft saturation and a slow-attack glue compressor. The master adds makeup gain (`MASTER_GAIN`), a compressor, a tanh soft clipper and a limiter, so the output stays below -2 dBFS.
@@ -143,7 +148,7 @@ npm run verify
 
 The Node tests cover original physics trajectories at 30/60/120 FPS, overlap resolution, chain merges, stacks, shakes, injectable balance settings, the techno composition, evolving electro/festival phrases, 10,000 bounded phrase renewals, 2,000 renewed chapters, 24 chapters of all arrangements, audible festival A/B/reprise development, immediate gameplay feedback, impact throttling, essential cue capacity, coalesced musical rewards, mute/retry behavior, and save compatibility. Baselines in `tests/fixtures/` pin the techno composition and the physics trajectories; tests import the actual modules directly.
 
-`tests/mix.test.js` covers the mix: the master chain's bounds, a reachability check that every song-bus node ends in the output, per-song trims, the sweep curve, filter and silent-beat behaviour of all three arrangements, supersaw symmetry and cleanup, the kick's sidechain envelope and the WAV analyzer.
+`tests/vocal.test.js` covers the vocal song: deterministic sessions and valid forms, singable parts (range, steps, chord tones on strong beats, rests, density), the returning hook, the voice's formants, vibrato and soft onset, cleanup and the arrangement's silences. `tests/mix.test.js` covers the mix: the master chain's bounds, a reachability check that every song-bus node ends in the output, per-song trims, the sweep curve, filter and silent-beat behaviour of all three arrangements, supersaw symmetry and cleanup, the kick's sidechain envelope and the WAV analyzer.
 
 For actual Web Audio rendering in a browser, open `tools/audio-check.html` and press **RUN AUDIO CHECKS**. It renders all songs at several sections, additional seeds, and busy gameplay through the live compressor/limiter and reactive filter. It checks finite samples, clipping, released voices, required cues, and freeze/recovery/death transitions. Choose a soundtrack and export music or music with gameplay feedback using the preview buttons. Festival previews span 48 bars, including intro, build, drop, break and another drop. Automated checks establish signal/runtime behavior; listening establishes musical taste.
 

@@ -8,6 +8,6 @@ const OPEN = 10;
 export function sweepFor(section, progress) {
   // The intro stays well below the kick's body (~55 Hz) so it still sounds like a kick.
   if (section === 'INTRO') return OPEN + 80 * (1 - progress) ** 2;
-  if (section === 'BUILD') return 30 * 30 ** (progress ** 2);
+  if (section === 'BUILD' || section === 'PRE') return 30 * 30 ** (progress ** 2);
   return OPEN;
 }

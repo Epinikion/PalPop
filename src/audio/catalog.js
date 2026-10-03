@@ -1,8 +1,20 @@
 const DANCE = 5;
 const TECHNO = 6;
 const FESTIVAL = 7;
+const VOCAL = 8;
 const VISUAL_THEME = 6;
 const TRACKS = {
+  [VOCAL]: {
+    buttonId: 'vocalTrack',
+    label: 'MELODIC HOUSE / SUNG HOOKS + PIANO',
+    name: 'GOLDEN HOUR',
+    style: 'vocal',
+    trim: 0.94,
+    vocals: true,
+    bpm: 122,
+    description:
+      'WARM, WORDLESS SYNTH VOCALS OVER PIANO, PLUCKS AND A SOFT FOUR-ON-THE-FLOOR. VERSES, BUILDS AND SING-ALONG CHORUSES KEEP RETURNING WITH NEW MELODIES.',
+  },
   [FESTIVAL]: {
     buttonId: 'festivalTrack',
     label: 'FESTIVAL HOUSE / PIANO + BIG SYNTH HOOK',
@@ -35,4 +47,4 @@ const TRACKS = {
   },
 };
 const TRACK_IDS = Object.keys(TRACKS).map(Number);
-export { DANCE, TECHNO, FESTIVAL, VISUAL_THEME, TRACK_IDS, TRACKS };
+export { DANCE, TECHNO, FESTIVAL, VOCAL, VISUAL_THEME, TRACK_IDS, TRACKS };

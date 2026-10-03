@@ -1,6 +1,12 @@
 import { TRACKS } from './catalog.js';
 import { mulberry32 } from '../core/math.js';
 import { SONG_STYLES } from './song-registry.js';
+/** Which chord loop each section plays; a session can override this with its own `banks`. */
+const BANK_OF_SECTION = {
+  BREAK: 'brk',
+  PEAK: 'lift',
+  FINAL: 'lift',
+};
 export function createAudioComposition({ audio }) {
   const MCONTOUR = [0, 1, 2, 3, 4, 5, 7, 9]; /* merge melody contour in pentatonic steps */
   /* arrangement forms: cyc 0 introduces the track, later cycles rotate through three different forms */
@@ -50,24 +56,20 @@ export function createAudioComposition({ audio }) {
      progression bank rotates with the cycle, voicing flips every 8 bars - chords never loop the same way. */
   function chordFor(bar, sec, cyc) {
     const S = chapterFor(cyc || 0);
-    const bank =
-      sec === 'BREAK'
-        ? S.progs.brk
-        : sec === 'PEAK' || sec === 'FINAL'
-          ? S.progs.lift
-          : S.progs.main;
+    const bank = S.progs[(S.banks || BANK_OF_SECTION)[sec]] || S.progs.main;
     const prog = bank[(S.style === 'dance' ? Math.floor(bar / 8) : cyc || 0) % bank.length],
       deg = prog[(S.barsPerChord ? Math.floor(bar / S.barsPerChord) : bar) % 4],
       sc = S.mode.s,
       notes = [];
-    const inv = (Math.floor(bar / 8) + (cyc || 0)) % 2;
-    for (let k = 0; k < (S.style === 'festival' ? 3 : 4); k++) {
+    const inv = (Math.floor(bar / 8) + (cyc || 0)) % 2,
+      triad = S.style === 'festival' || S.voicing === 'triad';
+    for (let k = 0; k < (triad ? 3 : 4); k++) {
       const i = deg + 2 * k;
       let n = 48 + S.pc + sc[i % 7] + 12 * Math.floor(i / 7);
       if (inv && k === 3) n -= 12;
       notes.push(n);
     }
-    if (S.style === 'festival') {
+    if (triad) {
       // Compact, stable piano inversions keep large root jumps out of the hook's register.
       for (let i = 0; i < notes.length; i++) {
         while (notes[i] > 71) notes[i] -= 12;

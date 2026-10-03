@@ -8,8 +8,16 @@ import {
   FESTIVAL_FORMS,
 } from './songs/festival-composition.js';
 import { createAudioFestival } from './festival.js';
+import { composeVocalSession, renewVocalChapter, VOCAL_FORMS } from './songs/vocal-composition.js';
+import { createAudioVocal } from './vocal.js';
 /** One registry connects a style's composition, chapter renewal, and arrangement. */
 export const SONG_STYLES = Object.freeze({
+  vocal: {
+    compose: composeVocalSession,
+    renewChapter: renewVocalChapter,
+    introForm: VOCAL_FORMS[0],
+    createArrangement: (deps) => createAudioVocal(deps).scheduleVocalStep,
+  },
   festival: {
     compose: composeFestivalSession,
     renewChapter: renewFestivalChapter,

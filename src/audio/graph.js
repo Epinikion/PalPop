@@ -50,6 +50,58 @@ function createWidener(context, width) {
   };
 }
 
+/**
+ * Lead and backing vocals get their own bus: low cut, a dip where voices get boxy, a gentle
+ * de-esser, a soft top and a compressor that evens out the phrases. It is only built for songs
+ * that have vocals, and the kick ducks it far less than the synths.
+ */
+function createVoxBus(context) {
+  const input = context.createGain(),
+    lowCut = context.createBiquadFilter(),
+    boxy = context.createBiquadFilter(),
+    presence = context.createBiquadFilter(),
+    sibilance = context.createBiquadFilter(),
+    soften = context.createBiquadFilter(),
+    leveler = context.createDynamicsCompressor(),
+    duck = context.createGain();
+  lowCut.type = 'highpass';
+  lowCut.frequency.value = 120;
+  lowCut.Q.value = 0.7;
+  boxy.type = 'peaking';
+  boxy.frequency.value = 320;
+  boxy.Q.value = 1;
+  boxy.gain.value = -2.5;
+  presence.type = 'peaking';
+  presence.frequency.value = 3200;
+  presence.Q.value = 0.8;
+  presence.gain.value = 2.5;
+  sibilance.type = 'peaking';
+  sibilance.frequency.value = 5600;
+  sibilance.Q.value = 1.6;
+  sibilance.gain.value = -3.5;
+  soften.type = 'lowpass';
+  soften.frequency.value = 11000;
+  soften.Q.value = 0.6;
+  leveler.threshold.value = -26;
+  leveler.knee.value = 18;
+  leveler.ratio.value = 3;
+  leveler.attack.value = 0.008;
+  leveler.release.value = 0.16;
+  input.connect(lowCut);
+  lowCut.connect(boxy);
+  boxy.connect(presence);
+  presence.connect(sibilance);
+  sibilance.connect(soften);
+  soften.connect(leveler);
+  leveler.connect(duck);
+  return {
+    input,
+    output: duck,
+    duck,
+    nodes: [input, lowCut, boxy, presence, sibilance, soften, leveler, duck],
+  };
+}
+
 export function createAudioGraph({ audio }) {
   /* ---------- graph ---------- */
   function buildMusicGraph() {
@@ -227,7 +279,8 @@ export function createAudioGraph({ audio }) {
     sweep.type = 'highpass';
     sweep.frequency.value = 10;
     sweep.Q.value = 0.8;
-    const widener = createWidener(audio.context, SYNTH_WIDTH);
+    const widener = createWidener(audio.context, SYNTH_WIDTH),
+      vox = TRACKS[audio.trackId]?.vocals ? createVoxBus(audio.context) : null;
     /* rumble bus: kick feed into a lowpassed feedback delay - the classic rolling techno floor */
     const rum = audio.context.createGain(),
       rumLP = audio.context.createBiquadFilter(),
@@ -253,6 +306,7 @@ export function createAudioGraph({ audio }) {
     melLP.connect(widener.input);
     widener.output.connect(duck);
     duck.connect(out);
+    if (vox) vox.output.connect(out);
     out.connect(trim);
     trim.connect(sweep);
     sweep.connect(audio.musIn);
@@ -275,7 +329,9 @@ export function createAudioGraph({ audio }) {
       dl,
       rv,
       sweep,
-      extras: [trim, sweep, drive, ...widener.nodes],
+      vox: vox?.input,
+      voxDuck: vox?.duck,
+      extras: [trim, sweep, drive, ...widener.nodes, ...(vox ? vox.nodes : [])],
     };
   }
   function feed(node, dl, rv) {

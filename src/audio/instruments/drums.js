@@ -38,6 +38,12 @@ export function createDrums({ audio, audioGraph, audioMath }) {
       const d = audio.graph.song.duck.gain;
       d.setValueAtTime(1 - duck, t);
       d.setTargetAtTime(1, t + 0.012, 0.075);
+      // Vocals only breathe with the kick: a third of the synths' dip, so words stay in front.
+      const voice = audio.graph.song.voxDuck;
+      if (voice) {
+        voice.gain.setValueAtTime(1 - duck * 0.3, t);
+        voice.gain.setTargetAtTime(1, t + 0.012, 0.09);
+      }
     }
     audio.stemFlash.kick = 0.16;
     audioGraph.releaseVoice(o, g);
