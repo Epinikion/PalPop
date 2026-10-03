@@ -1,0 +1,22 @@
+{
+  "name": "pal-pop",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A modular, dependency-free browser game with evolving electro, festival house and techno soundtracks.",
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "test": "node --test",
+    "format": "prettier --write src styles tests tools index.html README.md",
+    "format:check": "prettier --check src styles tests tools index.html README.md",
+    "cache:update": "node tools/update-precache.mjs",
+    "check": "node tools/check.mjs",
+    "prestart": "node tools/update-precache.mjs",
+    "verify": "npm run check && npm test && npm run format:check && node tools/update-precache.mjs --check"
+  },
+  "devDependencies": {
+    "@babel/parser": "^8.0.6",
+    "@babel/traverse": "^8.0.6",
+    "prettier": "^3.9.9"
+  }
+}

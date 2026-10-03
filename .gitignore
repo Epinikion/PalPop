@@ -1,14 +1,6 @@
 node_modules/
 .cache/
 test-results/
-.publish/
 
-# Generated previews and verification output.
-tools/*.png
-tools/*.wav
-tools/_check.js
-tools/audio-check.html
-tools/audiotest.html
-tools/drako.html
-tools/layout.html
-tools/preview.html
+# Exported audio previews
+*.wav
