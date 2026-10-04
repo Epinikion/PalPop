@@ -68,7 +68,12 @@ export function createGamePals({ game }) {
       game.lastSpecialDrop = game.drops;
       return BOOMER;
     }
-    if (open && game.drops >= 10 && rand() < Math.min(0.09, 0.03 + 0.012 * (av.length - 1))) {
+    const luck = game.mut?.luck ?? 1;
+    if (
+      open &&
+      game.drops >= 10 &&
+      rand() < Math.min(0.09 * luck, (0.03 + 0.012 * (av.length - 1)) * luck)
+    ) {
       const w = av.map((x) => (x.t === PRISM ? 2 : 1));
       let r = rand() * w.reduce((a, b) => a + b, 0);
       game.lastSpecialDrop = game.drops;
@@ -79,11 +84,12 @@ export function createGamePals({ game }) {
       return PRISM;
     }
     const w =
-      game.drops >= 150
+      game.mut?.weights ??
+      (game.drops >= 150
         ? [20, 22, 22, 20, 16]
         : game.drops >= 70
           ? [26, 25, 21, 17, 11]
-          : [32, 28, 20, 13, 7];
+          : [32, 28, 20, 13, 7]);
     let s = rand() * 100;
     for (let i = 0; i < w.length; i++) {
       s -= w[i];

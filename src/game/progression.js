@@ -1,6 +1,5 @@
 import { $, vib } from '../core/dom.js';
 import { FL, FR, FT, TIERS, W } from '../config.js';
-import { GAMEPLAY } from '../settings.js';
 export function createGameProgression({
   audioReactions,
   game,
@@ -73,10 +72,10 @@ export function createGameProgression({
     m.p = m.n;
     game.missionsDone++;
     updGoal();
-    game.swaps = Math.min(GAMEPLAY.swapsMax, game.swaps + 1);
+    game.swaps = Math.min(game.swapsCap, game.swaps + 1);
     uiInterface.updSwaps();
     gameEffects.popup(W / 2, 70, 'GOAL!', '#7dffc4', 1, 1.2);
-    gameEffects.popup(W / 2, 82, '+1 SWAP', '#fff', 1, 1.2);
+    gameEffects.popup(W / 2, 82, game.swapsCap ? '+1 SWAP' : '+XP', '#fff', 1, 1.2);
     for (let i = 0; i < 14; i++) gameEffects.confetti(FL + Math.random() * (FR - FL), FT + 2);
     const el = $('#goal');
     el.classList.remove('done');

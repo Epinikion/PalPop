@@ -5,10 +5,12 @@ import { BOOMER, CH_MAX, FLOOR, LOSE_Y, MAXT, PRISM, SCORE } from '../src/config
 import { GAMEPLAY } from '../src/settings.js';
 import { mulberry32 } from '../src/core/math.js';
 import { dailySeed } from '../src/game/records.js';
+import { dailyMutator } from '../src/game/mutators.js';
+import { BADGE_XP } from '../src/game/badges.js';
 
-const started = (daily = false) => {
+const started = (daily = false, mutator = null) => {
   const world = headlessGame();
-  world.gameActions.newGame(daily);
+  world.gameActions.newGame(daily, mutator);
   world.game.bodies = [];
   world.game.dropCooldown = 5;
   return world;
@@ -301,4 +303,102 @@ test("a daily run is booked as the day's best and survives a tab closing mid-run
   const day = store.get('daily', {});
   assert.equal(day.best, 900);
   assert.equal(day.tries, 1);
+});
+
+test('mutators bend the rules they name and move the score to match', () => {
+  const plain = started(),
+    heavy = started(false, 'heavy');
+  assert.equal(plain.game.mut, null);
+  assert.equal(heavy.game.pace, 1.2);
+  assert(1 / 1.2 < 1 && plain.game.pace === 1);
+  const merged = (world) => {
+    world.game.score = 0;
+    world.gameActions.doMerge(world.pal(4, 40, 150), world.pal(4, 52, 150), 0, 0);
+    return world.game.score;
+  };
+  assert.equal(merged(started(false, 'heavy')), Math.round(SCORE[5] * 1.5));
+  assert.equal(merged(started(false, 'lucky')), Math.max(1, Math.round(SCORE[5] * 0.9)));
+  assert.equal(merged(started()), SCORE[5]);
+
+  const fuse = started(false, 'fuse');
+  assert.equal(fuse.game.fuse, 3);
+  const tall = fuse.pal(4, 60, 100);
+  fuse.pin(tall, fuse.game.loseY - 20);
+  fuse.game.bodies = [tall];
+  fuse.run(2.6);
+  assert.equal(fuse.game.phase, 'play', 'two and a half seconds is survivable with a long fuse');
+  fuse.run(1);
+  assert.notEqual(fuse.game.phase, 'play');
+
+  const noswap = started(false, 'noswap');
+  assert.equal(noswap.game.swaps, 0);
+  noswap.game.mission = { type: 'fever', n: 1, p: 0, k: 9, reward: 25 };
+  noswap.gameProgression.misEvent('fever', 1);
+  assert.equal(noswap.game.swaps, 0, 'a goal cannot pay a swap that does not exist');
+
+  const fizz = started(false, 'fizz'),
+    normal = started();
+  for (const world of [fizz, normal])
+    world.gameActions.doMerge(world.pal(3, 20, 100), world.pal(3, 30, 100), 0, 0);
+  assert(Math.abs(fizz.game.feverCharge / normal.game.feverCharge - 1.6) < 1e-6);
+  fizz.game.feverCharge = 0.99;
+  fizz.gameActions.doMerge(fizz.pal(3, 20, 80), fizz.pal(3, 30, 80), 0, 0);
+  assert(fizz.game.feverT > 5.9 && fizz.game.feverT <= 6, 'the fever lasts six seconds');
+});
+
+test('lucky brings specials more often, big shots and small fry change the pals dealt', () => {
+  const dealt = (mutator) => {
+    const { game, gamePals, store } = started(false, mutator);
+    store.set('lvl', 20);
+    game.rand = mulberry32(11);
+    game.drops = 20;
+    game.pickCount = 5;
+    const picks = [];
+    for (let i = 0; i < 4000; i++) {
+      game.lastSpecialDrop = game.drops; // switch the pity timer off: only the roll is measured
+      picks.push(gamePals.pick());
+    }
+    return {
+      specials: picks.filter((t) => t >= PRISM).length,
+      mean: picks.filter((t) => t < PRISM).reduce((a, b) => a + b, 0) / picks.length,
+    };
+  };
+  const normal = dealt(null),
+    lucky = dealt('lucky'),
+    big = dealt('big'),
+    small = dealt('small');
+  assert(lucky.specials > normal.specials * 2, `${lucky.specials} vs ${normal.specials}`);
+  assert(small.mean < normal.mean && normal.mean < big.mean);
+});
+
+test('the daily has its own mutator whatever card was tapped, the same for everyone', () => {
+  const { game } = started(true, 'heavy');
+  assert.equal(game.mut, dailyMutator(game.daily));
+  assert.equal(started(true).game.mut, dailyMutator(game.daily));
+});
+
+test('finishing a run awards badges once and pays their XP', () => {
+  const { game, gameActions, store } = started();
+  game.score = 3000;
+  game.highestTier = 5;
+  game.runStats = { fevers: 0, specials: 0, suns: 0, combo: 3 };
+  game.runTime = 120;
+  game.merges = 40;
+  gameActions.gameOver();
+  gameActions.finishOver();
+  const earned = store.get('badges', []);
+  for (const id of ['first', 'tabby', 'panda', 'chain3']) assert(earned.includes(id), id);
+  assert(!earned.includes('owl'));
+  const xp = store.get('xp', 0) + (store.get('lvl', 1) - 1) * 200;
+  assert(xp >= earned.length * BADGE_XP, `XP ${xp} covers ${earned.length} badges`);
+  gameActions.newGame();
+  game.score = 100;
+  game.highestTier = 5;
+  gameActions.gameOver();
+  gameActions.finishOver();
+  assert.deepEqual(
+    store.get('badges', []).slice(0, earned.length),
+    earned,
+    'a badge is never earned twice',
+  );
 });

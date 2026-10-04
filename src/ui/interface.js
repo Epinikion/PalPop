@@ -2,6 +2,8 @@ import { $ } from '../core/dom.js';
 import { H, MAXT, PRISM, SPECIALS, TIERS, W } from '../config.js';
 import { TRACK_IDS, TRACKS } from '../audio/catalog.js';
 import { dailyNumber, dailyState, dayKey, streak } from '../game/records.js';
+import { BADGE_XP, badgeRows } from '../game/badges.js';
+import { dailyMutator } from '../game/mutators.js';
 import { store } from '../core/storage.js';
 import { fmt, fmtK } from '../core/math.js';
 export function createUiInterface({
@@ -100,7 +102,20 @@ export function createUiInterface({
   };
   const questCount = (q, n) =>
     q.type === 'reach' ? n + 1 + '/' + (q.target + 1) : n + '/' + q.target;
-  function renderOver({ score, best, recap, quests, daily, dailyNo, streak }) {
+  function renderOver({
+    level,
+    mutator,
+    unlocked,
+    offer,
+    badges,
+    score,
+    best,
+    recap,
+    quests,
+    daily,
+    dailyNo,
+    streak,
+  }) {
     $('#goBest').textContent = recap.newBest
       ? 'BEST ' + fmt(best)
       : recap.nearMiss
@@ -115,6 +130,11 @@ export function createUiInterface({
     recapBox.replaceChildren();
     for (const record of recap.records.slice(0, 2))
       line(recapBox, 'rec hot', 'NEW ' + record + '!');
+    if (mutator) line(recapBox, 'rec', mutator.name + ' RUN  SCORE X' + mutator.mult);
+    for (const m of unlocked) line(recapBox, 'rec hot', 'NEW MUTATOR: ' + m.name + '!');
+    for (const b of badges.slice(0, 3))
+      line(recapBox, 'rec hot', 'BADGE: ' + b.name + ' +' + BADGE_XP + ' XP');
+    if (badges.length > 3) line(recapBox, 'rec hot', '+' + (badges.length - 3) + ' MORE BADGES!');
     if (recap.runs >= 3) line(recapBox, 'rec', 'AVERAGE OF LAST 5  ' + fmt(recap.average));
     const dailyBox = $('#goDaily');
     dailyBox.hidden = !dailyNo;
@@ -128,6 +148,25 @@ export function createUiInterface({
         daily.tries +
         (streak >= 2 ? '  ' + streak + ' DAYS' : '');
     $('#freeBtn').hidden = !dailyNo;
+    // Tapping a mutator card IS the retry: two taps fewer than choosing and then starting.
+    const cards = $('#goMut');
+    cards.replaceChildren();
+    cards.hidden = !offer.length;
+    if (offer.length) {
+      line(cards, 'qhead', 'NEXT RUN WITH...');
+      const row = document.createElement('div');
+      row.className = 'mrow';
+      for (const m of offer) {
+        const card = document.createElement('button');
+        card.className = 'pbtn mcard';
+        card.dataset.id = m.id;
+        card.title = m.desc;
+        line(card, 'mname', m.name);
+        line(card, 'mmult', 'X' + m.mult);
+        row.append(card);
+      }
+      cards.append(row);
+    }
     const questBox = $('#goQuests');
     questBox.replaceChildren();
     if (quests.length) line(questBox, 'qhead', 'QUESTS');
@@ -147,11 +186,14 @@ export function createUiInterface({
       state = dailyState(store, today),
       days = streak(store, today);
     $('#dailyBtn').textContent = 'DAILY #' + dailyNumber(today);
-    $('#tDaily').textContent = state.tries
-      ? 'TODAY: BEST ' + fmt(state.best)
-      : days
-        ? days + ' DAY' + (days > 1 ? 'S' : '') + ' IN A ROW'
-        : 'NEW PALS EVERY DAY';
+    const mutator = dailyMutator(today);
+    $('#tDaily').textContent =
+      (mutator ? mutator.name + ' DAY\n' : '') +
+      (state.tries
+        ? 'TODAY: BEST ' + fmt(state.best)
+        : days
+          ? days + ' DAY' + (days > 1 ? 'S' : '') + ' IN A ROW'
+          : 'NEW PALS EVERY DAY');
   }
   const radio = $('#radio');
   const songButtons = TRACK_IDS.map((id) => {
@@ -250,6 +292,25 @@ export function createUiInterface({
         u ? renderSprites.SPR[ce.i] : renderSprites.DK[ce.i],
         Math.max(16, Math.round(Math.max(20, ce.b.clientWidth - 4) * dpr)),
       );
+    }
+    const rows = badgeRows(store, {
+        dailyDays: (store.get('days', []) || []).length,
+        worlds,
+      }),
+      got = rows.filter((row) => row.got).length,
+      list = $('#badgeList');
+    $('#badgeTitle').textContent = 'BADGES ' + got + '/' + rows.length;
+    list.replaceChildren();
+    for (const { badge, value, got: earned } of rows) {
+      const row = document.createElement('div');
+      row.className = 'badge' + (earned ? ' got' : '');
+      line(row, 'bname', earned ? badge.name : '???');
+      line(row, 'bhint', badge.hint);
+      line(row, 'bnum', earned ? 'DONE' : value + '/' + badge.goal);
+      const bar = document.createElement('i');
+      bar.style.width = (earned ? 1 : value / badge.goal) * 100 + '%';
+      row.append(bar);
+      list.append(row);
     }
     const i = selPal,
       T = TIERS[i];

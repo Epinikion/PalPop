@@ -33,6 +33,8 @@ import {
   streak,
 } from './records.js';
 import { TRACKS } from '../audio/catalog.js';
+import { BADGE_XP, checkBadges } from './badges.js';
+import { dailyMutator, mutatorById, newMutators, offerMutators } from './mutators.js';
 export function createGameActions({
   audio,
   audioReactions,
@@ -48,6 +50,8 @@ export function createGameActions({
 }) {
   /* ================= game flow ================= */
   function addScore(p) {
+    // A mutator moves the score to match what it does to the run.
+    if (game.mut && p > 0) p = Math.max(1, Math.round(p * game.mut.mult));
     game.score += p;
     gameEffects.bumpEl(uiElements.scoreEl);
     if (game.score > game.best) game.best = game.score;
@@ -80,7 +84,7 @@ export function createGameActions({
       cb,
     };
   }
-  function newGame(daily = false) {
+  function newGame(daily = false, mutatorId = null) {
     audioRuntime.initAudio();
     audioReactions.resetLiveMusic();
     game.bodies = [];
@@ -106,9 +110,7 @@ export function createGameActions({
     game.merges = 0;
     game.drops = 0;
     game.highestTier = 0;
-    game.pace = 1;
     game.lastNb = null;
-    game.swaps = GAMEPLAY.swapsAtStart;
     game.runTime = 0;
     game.lastSpecialDrop = 0;
     game.runStats = { fevers: 0, specials: 0, suns: 0, combo: 0 };
@@ -118,6 +120,13 @@ export function createGameActions({
     store.set('worlds', store.get('worlds', 0) | (1 << 6));
     game.daily = daily ? dayKey() : null;
     game.rand = daily ? mulberry32(dailySeed(game.daily)) : Math.random;
+    // The day's mutator is the same for everyone; free play uses the card that was tapped.
+    game.mut = daily ? dailyMutator(game.daily) : mutatorById(mutatorId);
+    game.pace = game.mut?.pace ?? 1;
+    game.fuse = game.mut?.fuse ?? 2;
+    game.feverLen = game.mut?.feverTime ?? FEVER_T;
+    game.swaps = game.mut?.swaps ?? GAMEPLAY.swapsAtStart;
+    game.swapsCap = game.mut?.swaps === 0 ? 0 : GAMEPLAY.swapsMax;
     game.freeze = 0;
     game.flashOpacity = 0;
     game.quakeTime = 0;
@@ -148,6 +157,7 @@ export function createGameActions({
     game.nextTier = gamePals.pick();
     game.mission = gameProgression.genMission(0);
     gameProgression.setGoal();
+    if (game.mut) gameEffects.popup(W / 2, 60, game.mut.name + ' RUN', '#ffe45c', 1, 2);
     $('#title').hidden = true;
     $('#over').hidden = true;
     $('#goUp').hidden = true;
@@ -263,7 +273,7 @@ export function createGameActions({
   }
   function startFever() {
     audioReactions.reactToEvent('fever');
-    game.feverT = FEVER_T;
+    game.feverT = game.feverLen;
     game.runStats.fevers++;
     audio.feverOn = true;
     game.feverCharge = 1;
@@ -321,7 +331,9 @@ export function createGameActions({
     if (game.feverT <= 0) {
       // Fever is earned by chains: each link makes the next one charge far more.
       game.feverCharge +=
-        (0.02 + 0.006 * Math.min(t, 8)) * (1 + 0.8 * Math.min(game.comboCount - 1, 4));
+        (0.02 + 0.006 * Math.min(t, 8)) *
+        (1 + 0.8 * Math.min(game.comboCount - 1, 4)) *
+        (game.mut?.feverGain ?? 1);
       if (game.feverCharge >= 1) startFever();
     }
     // Saving a pal that was about to lose you the game pays more the later you leave it.
@@ -477,6 +489,7 @@ export function createGameActions({
         suns: game.runStats.suns,
         fevers: game.runStats.fevers,
         specials: game.runStats.specials,
+        mutator: !!game.mut,
       },
       L0 = store.get('lvl', 1),
       X0 = store.get('xp', 0),
@@ -484,7 +497,12 @@ export function createGameActions({
       recap = recordRun(store, { ...run, previousBest: game.bestStart }),
       daily = game.daily ? recordDaily(store, game.daily, run) : null,
       quests = advanceQuests(store, Math.random, run, L0),
-      best = Math.max(store.get('best', 0), game.score);
+      best = Math.max(store.get('best', 0), game.score),
+      days = store.get('days', []),
+      badges = checkBadges(store, {
+        dailyDays: Array.isArray(days) ? days.length : 0,
+        worlds: [0, 1, 2, 3, 4, 5, 6].filter((w) => store.get('worlds', 0) & (1 << w)).length,
+      });
     store.set('best', best);
     game.newBest = recap.newBest;
     game.bestBase = best;
@@ -493,7 +511,11 @@ export function createGameActions({
     uiElements.scoreEl.textContent = fmt(game.score);
     uiElements.bestEl.textContent = fmt(best);
     const gain =
-      Math.floor(game.score / 40) + game.missionsDone * 25 + game.discoveries * 40 + quests.xp;
+      Math.floor(game.score / 40) +
+      game.missionsDone * 25 +
+      game.discoveries * 40 +
+      quests.xp +
+      badges.length * BADGE_XP;
     let L = L0,
       X = X0 + gain;
     while (X >= need(L)) {
@@ -506,6 +528,11 @@ export function createGameActions({
     const gs = $('#goScore');
     gs.textContent = '0';
     uiInterface.renderOver({
+      level: L,
+      mutator: game.mut,
+      unlocked: newMutators(L0, L),
+      offer: game.daily ? [] : offerMutators(L, Math.random, game.mut?.id),
+      badges,
       score: game.score,
       best,
       recap,

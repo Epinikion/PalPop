@@ -320,7 +320,14 @@ export function createRenderBoard({
     }
     for (const b of game.bodies)
       if (b.ot > 0.05)
-        drawArc(g, b.x, b.y, b.r + 2, Math.min(1, b.ot / 2), flashRed ? '#ff4d6d' : '#ffffff');
+        drawArc(
+          g,
+          b.x,
+          b.y,
+          b.r + 2,
+          Math.min(1, b.ot / game.fuse),
+          flashRed ? '#ff4d6d' : '#ffffff',
+        );
     for (const r of game.rays) drawRays(g, r);
     if (game.phase === 'play') {
       const cx = Math.round(clamp(game.carrierX, FL + 4, FR - 4));

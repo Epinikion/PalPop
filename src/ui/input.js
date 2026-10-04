@@ -14,9 +14,9 @@ export function createUiInput({ audioRuntime, game, gameActions, uiElements, uiI
   const trap = () => {
     if (!window.history.state?.palpop) window.history.pushState({ palpop: true }, '');
   };
-  const start = (daily = false) => {
+  const start = (daily = false, mutator = null) => {
     trap();
-    gameActions.irisTo(() => gameActions.newGame(daily));
+    gameActions.irisTo(() => gameActions.newGame(daily, mutator));
   };
   // PLAY AGAIN repeats the mode you were in: a daily run replays the same pals.
   const again = () => start(!!game.daily);
@@ -114,6 +114,10 @@ export function createUiInput({ audioRuntime, game, gameActions, uiElements, uiI
   });
   $('#sndBtn').addEventListener('click', uiInterface.openRadio);
   $('#againBtn').addEventListener('click', again);
+  $('#goMut').addEventListener('click', (e) => {
+    const card = e.target.closest('button[data-id]');
+    if (card) start(false, card.dataset.id);
+  });
   $('#freeBtn').addEventListener('click', () => start(false));
   $('#dailyBtn').addEventListener('click', () => {
     audioRuntime.initAudio();

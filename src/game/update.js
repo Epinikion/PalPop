@@ -1,5 +1,5 @@
 import { RM } from '../core/dom.js';
-import { FEVER_T, FL, FR, FT, H, LOSE_Y, TIERS, W } from '../config.js';
+import { FL, FR, FT, H, LOSE_Y, TIERS, W } from '../config.js';
 import { GAMEPLAY } from '../settings.js';
 import { clamp } from '../core/math.js';
 export function createGameUpdate({
@@ -95,7 +95,7 @@ export function createGameUpdate({
       }
       if (game.feverT > 0) {
         game.feverT -= dt;
-        game.feverCharge = Math.max(0, game.feverT / FEVER_T);
+        game.feverCharge = Math.max(0, game.feverT / game.feverLen);
         if (Math.random() < dt * 22) gameEffects.confetti(FL + Math.random() * (FR - FL), FT + 1);
         if (game.feverT <= 0) {
           game.feverT = 0;
@@ -156,7 +156,7 @@ export function createGameUpdate({
             b.ot += dt;
             game.danger = true;
           }
-          if (b.ot > 2.0) {
+          if (b.ot > game.fuse) {
             gameActions.gameOver();
             break;
           }

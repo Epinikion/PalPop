@@ -19,6 +19,8 @@ const STATS = {
   suns: 0,
   fevers: 0,
   specials: 0,
+  quests: 0,
+  mutantRuns: 0,
 };
 
 export function loadStats(store) {
@@ -28,7 +30,7 @@ export function loadStats(store) {
 
 /**
  * Books a finished run and describes it against the player's history.
- * `run`: { score, tier, secs, merges, combo, suns, fevers, specials, previousBest? }; the best
+ * `run`: { score, tier, secs, merges, combo, suns, fevers, specials, mutator?, previousBest? }; the best
  * before this run defaults to the stored one.
  */
 export function recordRun(store, run) {
@@ -45,6 +47,8 @@ export function recordRun(store, run) {
       suns: before.suns + run.suns,
       fevers: before.fevers + run.fevers,
       specials: before.specials + run.specials,
+      quests: before.quests,
+      mutantRuns: before.mutantRuns + (run.mutator ? 1 : 0),
     },
     saved = store.get('hist', []),
     history = [
@@ -151,6 +155,8 @@ export function advanceQuests(store, random, run, level) {
         next.filter(Boolean).map((q) => q.type),
       );
   store.set('quests', next);
+  const finished = rows.filter((row) => row.done).length;
+  if (finished) store.set('stats', { ...stats, quests: stats.quests + finished });
   return { rows, xp };
 }
 

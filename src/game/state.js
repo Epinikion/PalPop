@@ -1,5 +1,6 @@
 import { store } from '../core/storage.js';
-import { LOSE_Y, W } from '../config.js';
+import { FEVER_T, LOSE_Y, W } from '../config.js';
+import { GAMEPLAY } from '../settings.js';
 import { MAXT } from '../config.js';
 /** Owns run data. Controllers receive this instance explicitly; nothing is kept on window. */
 export function createGameState(storage = store) {
@@ -64,6 +65,10 @@ export function createGameState(storage = store) {
   game.bestAnnounced = false;
   game.runStats = { fevers: 0, specials: 0, suns: 0, combo: 0 };
   game.theme = 6;
+  game.mut = null;
+  game.fuse = 2;
+  game.feverLen = FEVER_T;
+  game.swapsCap = GAMEPLAY.swapsMax;
   game.bAvg = 0;
   game.feverCharge = 0;
   game.feverT = 0;
