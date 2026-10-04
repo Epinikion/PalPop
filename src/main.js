@@ -27,7 +27,6 @@ import { createGameUpdate } from './game/update.js';
 import { createRenderBoard } from './render/board.js';
 import { createUiInterface } from './ui/interface.js';
 import { createUiInput } from './ui/input.js';
-import { watchViewport } from './ui/viewport.js';
 const game = createGameState(),
   audio = createAudioState();
 // Stable controller references let callbacks connect game/UI/audio without circular imports.
@@ -196,7 +195,6 @@ Object.assign(
   }),
 );
 createUiInput({ uiElements, uiInterface, game, audioRuntime, gameActions });
-watchViewport();
 function refreshMusicSettings() {
   if (!uiInterface.renderRadio) return;
   gameActions.setTitleInfo();

@@ -1714,7 +1714,7 @@ html {
   #app {
     position: fixed;
     inset: 0;
-    height: var(--app-h, auto);
+    height: auto;
     min-height: 0;
     width: 100%;
     max-width: none;
@@ -1856,7 +1856,7 @@ html {
     max-width: none;
     position: fixed;
     inset: 0;
-    height: var(--app-h, auto);
+    height: auto;
     padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
       max(6px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
     border: 0;
@@ -2115,12 +2115,9 @@ html.calm *::after {
   }
 }
 
-/* iOS 26 home-screen apps: the window comes out one top inset short, 100lvh is the full screen.
-   viewport.js sets --app-h when it sees that exact shortfall; this is the fallback without it. */
-@supports (-webkit-touch-callout: none) {
-  @media (display-mode: standalone) and (max-width: 699px) {
-    #app {
-      height: var(--app-h, 100lvh);
-    }
+/* Phones held sideways: the bars an installed app leaves beside the notch take the app's colour. */
+@media (orientation: landscape) and (max-height: 520px) {
+  html {
+    background: #1c1432;
   }
 }
