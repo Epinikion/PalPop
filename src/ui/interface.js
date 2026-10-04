@@ -431,6 +431,18 @@ export function createUiInterface({
     renderFeel();
   });
   renderFeel();
+  // A phone can hold on to an old copy of the app. This throws the saved copy away and loads the
+  // newest version from the network; the saved scores and settings are not touched.
+  $('#updateBtn').addEventListener('click', async () => {
+    $('#updateBtn').textContent = 'UPDATING...';
+    try {
+      const workers = (await navigator.serviceWorker?.getRegistrations?.()) || [];
+      await Promise.all(workers.map((worker) => worker.unregister()));
+      for (const key of (await window.caches?.keys?.()) || [])
+        if (key.startsWith('palpop-')) await window.caches.delete(key);
+    } catch {}
+    window.location.reload();
+  });
   $('#radioClose').addEventListener('click', closeRadio);
   let focusReturn = null;
   function openDialog(el) {

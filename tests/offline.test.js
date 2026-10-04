@@ -12,6 +12,7 @@ function worker() {
     Set,
     Promise,
     Response,
+    Request,
     self: {
       location: new URL(scope + 'sw.js'),
       registration: { scope },
@@ -44,9 +45,14 @@ test('offline install caches every module, and activation preserves other apps',
   let pending;
   handlers.get('install')({ waitUntil: (promise) => (pending = promise) });
   await pending;
-  assert(cached.includes('src/main.js'));
-  assert(cached.includes('assets/fonts/press-start-2p.ttf'));
-  assert(cached.includes('tools/pal-designer.html'));
+  const paths = cached.map((request) => new URL(request.url).pathname);
+  assert(paths.includes('/src/main.js'));
+  assert(paths.includes('/assets/fonts/press-start-2p.ttf'));
+  assert(paths.includes('/tools/pal-designer.html'));
+  assert(
+    cached.every((request) => request.cache === 'reload'),
+    'every asset comes from the network, never from an HTTP cache',
+  );
   handlers.get('activate')({ waitUntil: (promise) => (pending = promise) });
   await pending;
   assert.deepEqual(deleted, ['palpop-v12-festival', 'palpop-refactored-old', 'palpop-old']);

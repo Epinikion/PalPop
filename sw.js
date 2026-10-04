@@ -1,5 +1,9 @@
 /* This worker only owns Pal Pop's own cache and scope. Older palpop-* caches are removed on activation. */
-importScripts('./precache.js');
+/* BUILD changes with every version of the app (npm run cache:update writes it). It makes this file
+   differ byte for byte, so a browser always notices an update, and it is part of the precache URL, so
+   a stale copy of the list can never be served from an HTTP cache. */
+const BUILD = 'fbf7a5cfc8114209';
+importScripts('./precache.js?v=' + BUILD);
 const PREFIX = 'palpop-';
 const CACHE = PREFIX + CACHE_VERSION;
 const assetURLs = new Set(PRECACHE.map((asset) => new URL(asset, self.registration.scope).href));
@@ -7,7 +11,12 @@ self.addEventListener('install', (event) =>
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE);
-      await cache.addAll(PRECACHE);
+      // Straight from the network, never from an HTTP cache: a complete, matching set.
+      await cache.addAll(
+        PRECACHE.map(
+          (asset) => new Request(new URL(asset, self.registration.scope), { cache: 'reload' }),
+        ),
+      );
       await self.skipWaiting();
     })(),
   ),
