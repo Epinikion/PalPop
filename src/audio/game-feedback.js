@@ -14,7 +14,6 @@ export function createGameAudio({ audio, audioComposition, audioGraph, audioMath
     fever: 1,
     danger: 0.68,
     over: 1,
-    boom: 0.15,
     zap: 0.15,
     gold: 0.5,
     freeze: 0.5,
@@ -138,8 +137,7 @@ export function createGameAudio({ audio, audioComposition, audioGraph, audioMath
       }
     } else if (kind === 'danger') voice(t, 39, 36, 0.11, 0.13, 'pop', 0);
     else if (kind === 'over') voice(t, chord.notes[0], chord.notes[0] - 12, 0.32, 0.2, 'pop', 0);
-    else if (kind === 'shake' || kind === 'boom')
-      voice(t, 52, 28, 0.23, kind === 'boom' ? 0.38 : 0.3, 'pop', pan);
+    else if (kind === 'shake') voice(t, 52, 28, 0.23, 0.3, 'pop', pan);
     else if (kind === 'zap')
       voice(t, chord.notes[1] + 12, chord.notes[0], 0.14, 0.24, 'reward', pan);
     else if (kind === 'freeze')

@@ -1,4 +1,4 @@
-import { BOOMER, GOLDIE, ICY, PRISM, TIERS, ZAPPY } from '../config.js';
+import { GOLDIE, ICY, PRISM, TIERS, ZAPPY } from '../config.js';
 export function createGameAnimation({ game, gameEffects, gamePhysics, gameSpecials }) {
   function tickPal(p, dt) {
     p.bt -= dt;
@@ -78,20 +78,6 @@ export function createGameAnimation({ game, gameEffects, gamePhysics, gameSpecia
             sz: 1,
             g: -4,
           });
-        if (b.t === BOOMER && !b.act && b.age > 1) {
-          if (Math.sin(b.age * 36) > 0) b.flash = Math.max(b.flash, 0.7);
-          if (Math.random() < dt * 7)
-            game.parts.push({
-              x: b.x + 3,
-              y: b.y - b.r - 1,
-              vx: (Math.random() - 0.5) * 7,
-              vy: -13,
-              l: 0.26,
-              c: Math.random() < 0.5 ? '#ffe45c' : '#ff9a3c',
-              sz: 1,
-              g: -16,
-            });
-        }
       }
     }
     if (dt > 0 && game.phase === 'play') gameSpecials.actSpecials();

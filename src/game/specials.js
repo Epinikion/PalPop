@@ -1,4 +1,4 @@
-import { BOOMER, GOLDIE, SCORE, TIERS, W, ZAPPY } from '../config.js';
+import { GOLDIE, SCORE, TIERS, W, ZAPPY } from '../config.js';
 import { vib } from '../core/dom.js';
 export function createGameSpecials({
   audioReactions,
@@ -11,7 +11,6 @@ export function createGameSpecials({
 }) {
   /* ================= special pals ================= */
   const SPT = {
-    12: 1.5,
     13: 0.9,
     14: 0.9,
     15: 0.9,
@@ -25,41 +24,6 @@ export function createGameSpecials({
       gameActions.ascend();
     }
     if (!game.dex[nt]) gameActions.discover(nt);
-  }
-  function boom(b) {
-    audioReactions.reactToEvent('boom', { x: b.x });
-    b.dead = true;
-    const R = 30,
-      mult = curMult();
-    let pts = 0;
-    for (const o of game.bodies) {
-      if (o === b || o.dead || o.mg) continue;
-      const d = Math.hypot(o.x - b.x, o.y - b.y);
-      if (d < R + o.r * 0.5 && o.t <= 8) {
-        o.dead = true;
-        pts += SCORE[o.t] * 2;
-        const rp = TIERS[o.t].ramp;
-        gameEffects.burst(o.x, o.y, [rp[2], rp[3], '#fff'], 8 + o.t, 90, 100);
-        gameEffects.ring(o.x, o.y, o.r + 3, rp[3]);
-      } else if (d < R + 45) {
-        const a = Math.atan2(o.y - b.y, o.x - b.x),
-          f = 260 / (1 + d / 25);
-        o.vx += Math.cos(a) * f;
-        o.vy += Math.sin(a) * f - 60;
-        o.qv += 0.5;
-      }
-    }
-    pts *= mult;
-    if (pts > 0) gameActions.addScore(pts);
-    gameEffects.burst(b.x, b.y, ['#ffe45c', '#ff9a3c', '#e8443c', '#fff'], 36, 150, 80);
-    gameEffects.ring(b.x, b.y, R + 12, '#ffb14a');
-    gameEffects.ring(b.x, b.y, R - 6, '#fff');
-    gameEffects.popup(b.x, b.y - 14, 'BOOM!', '#ffb14a', 2, 1);
-    if (pts > 0) gameEffects.popup(b.x, b.y + 2, '+' + pts, '#fff', 1, 1);
-    gameEffects.shake(9);
-    game.freeze = 0.06;
-    game.flashOpacity = Math.max(game.flashOpacity, 0.5);
-    vib([50, 30, 50]);
   }
   function goldRush(b) {
     audioReactions.reactToEvent('gold', { x: b.x });
@@ -149,13 +113,12 @@ export function createGameSpecials({
   }
   function actSpecials() {
     const list = game.bodies.filter(
-      (b) => b.t >= BOOMER && !b.dead && !b.mg && !b.act && b.age >= SPT[b.t],
+      (b) => b.t >= GOLDIE && !b.dead && !b.mg && !b.act && b.age >= SPT[b.t],
     );
     for (const b of list) {
       b.act = true;
       game.runStats.specials++;
-      if (b.t === BOOMER) boom(b);
-      else if (b.t === GOLDIE) goldRush(b);
+      if (b.t === GOLDIE) goldRush(b);
       else if (b.t === ZAPPY) zap(b);
       else freezeTime(b);
     }

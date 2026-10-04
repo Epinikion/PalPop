@@ -22,8 +22,16 @@ import {
   TRANCE_FORMS,
 } from './songs/trance-composition.js';
 import { createAudioTrance } from './trance.js';
+import { composeIndieSession, renewIndieChapter, INDIE_FORMS } from './songs/indie-composition.js';
+import { createAudioIndie } from './indie.js';
 /** One registry connects a style's composition, chapter renewal, and arrangement. */
 export const SONG_STYLES = Object.freeze({
+  indie: {
+    compose: composeIndieSession,
+    renewChapter: renewIndieChapter,
+    introForm: INDIE_FORMS[0],
+    createArrangement: (deps) => createAudioIndie(deps).scheduleIndieStep,
+  },
   trance: {
     compose: composeTranceSession,
     renewChapter: renewTranceChapter,

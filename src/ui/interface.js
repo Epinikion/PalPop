@@ -286,7 +286,7 @@ export function createUiInterface({
       $('#tempoLabel').textContent = TRACKS[audio.trackId].bpm + ' BPM';
     }
   }
-  const ORDER = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+  const ORDER = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15];
   const book = $('#book');
   const grid = $('#bookGrid');
   const binfo = $('#bookInfo');

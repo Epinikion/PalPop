@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { headlessGame } from './helpers/headless-game.js';
-import { BOOMER, CH_MAX, FLOOR, LOSE_Y, MAXT, PRISM, SCORE } from '../src/config.js';
+import { CH_MAX, FLOOR, GOLDIE, LOSE_Y, MAXT, PRISM, SCORE, SPECIALS } from '../src/config.js';
 import { GAMEPLAY } from '../src/settings.js';
 import { mulberry32 } from '../src/core/math.js';
 import { dailySeed } from '../src/game/records.js';
@@ -231,7 +231,7 @@ test('a daily run deals every player the same pals and goals, whatever their lev
   );
 });
 
-test('a pile in trouble is owed a Boomer, and a standing Solis a wildcard', () => {
+test('a pile in trouble is owed a wildcard, and a standing Solis one too', () => {
   const { game, gamePals, pal } = started(true);
   game.rand = () => 0.99;
   game.pickCount = 5;
@@ -240,7 +240,7 @@ test('a pile in trouble is owed a Boomer, and a standing Solis a wildcard', () =
   pal(6, 60, 70);
   assert.equal(
     gamePals.pick(),
-    BOOMER,
+    PRISM,
     'the pile reaches the top half, with no special for 25 drops',
   );
   assert.equal(game.lastSpecialDrop, 40);
@@ -249,7 +249,7 @@ test('a pile in trouble is owed a Boomer, and a standing Solis a wildcard', () =
   calm.game.pickCount = 5;
   calm.game.drops = 40;
   calm.pal(6, 60, 170);
-  assert.notEqual(calm.gamePals.pick(), BOOMER, 'a low pile is left alone');
+  assert.notEqual(calm.gamePals.pick(), PRISM, 'a low pile is left alone');
   const solis = started(true);
   solis.game.rand = () => 0.99;
   solis.game.pickCount = 5;
@@ -401,4 +401,21 @@ test('finishing a run awards badges once and pays their XP', () => {
     earned,
     'a badge is never earned twice',
   );
+});
+
+test('the bomb is gone: nothing deals it, nothing explodes, and the specials start at Goldie', () => {
+  assert(!SPECIALS.some(({ n, hint, desc }) => /boom/i.test(`${n} ${hint} ${desc}`)));
+  assert.equal(Math.min(...SPECIALS.filter(({ t }) => t !== PRISM).map(({ t }) => t)), GOLDIE);
+  // Whatever the level, the specials on offer never include tier 12, even after a long run.
+  const { game, gamePals } = started(true);
+  game.pickCount = 5;
+  const seen = new Set();
+  let seed = 1;
+  game.rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let drop = 10; drop < 3000; drop++) {
+    game.drops = drop;
+    seen.add(gamePals.pick());
+  }
+  assert(!seen.has(12), 'no bomb is ever dealt');
+  assert(seen.has(PRISM) && seen.has(GOLDIE));
 });

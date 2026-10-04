@@ -60,7 +60,12 @@ export function createAudioScheduler({
         audio.pendingFx.length = 0;
         const tb = nextBeatTime(now + 0.35),
           st = Math.max(now + 0.02, tb - 0.55);
-        if (S.style === 'festival' || S.style === 'vocal' || S.style === 'trance') {
+        if (
+          S.style === 'festival' ||
+          S.style === 'vocal' ||
+          S.style === 'indie' ||
+          S.style === 'trance'
+        ) {
           const bar = Math.max(0, Math.floor((tb - audio.songStart) / (S.spb * 4))),
             section = audioComposition.sectionAt(bar),
             chord = audioComposition.chordFor(bar, section.sec, section.cyc);
@@ -89,7 +94,12 @@ export function createAudioScheduler({
           section = audioComposition.sectionAt(bar),
           chord = audioComposition.chordFor(bar, section.sec, section.cyc);
         audio.lastRewardTime = tb + S.spb;
-        if (S.style === 'festival' || S.style === 'vocal' || S.style === 'trance')
+        if (
+          S.style === 'festival' ||
+          S.style === 'vocal' ||
+          S.style === 'indie' ||
+          S.style === 'trance'
+        )
           audioInstruments.eFestivalPiano(
             tb,
             chord.notes.slice(0, 3),

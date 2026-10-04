@@ -4,7 +4,20 @@ const FESTIVAL = 7;
 const VOCAL = 8;
 const WAREHOUSE = 9;
 const TRANCE = 10;
+const INDIE = 11;
 const TRACKS = {
+  [INDIE]: {
+    buttonId: 'indieTrack',
+    label: 'INDIE DANCE / ELECTRIC PIANO + OFFBEAT BASS',
+    name: 'OPEN ROAD',
+    style: 'indie',
+    trim: 1.2,
+    pump: 0.8,
+    vocals: true,
+    bpm: 123,
+    description:
+      'WARM, SUNNY INDIE DANCE: A STRAIGHT KICK THAT PUMPS THE WHOLE MIX, A ROUND BASS BETWEEN THE BEATS, DOTTED ELECTRIC PIANO AND A SUNG HOOK. LONG GROOVES, ONE REAL BREAKDOWN.',
+  },
   [TRANCE]: {
     buttonId: 'tranceTrack',
     label: 'TRANCE / ROLLING BASS + SUPERSAW WALL',
@@ -73,4 +86,4 @@ const TRACKS = {
   },
 };
 const TRACK_IDS = Object.keys(TRACKS).map(Number);
-export { DANCE, TECHNO, FESTIVAL, VOCAL, WAREHOUSE, TRANCE, TRACK_IDS, TRACKS };
+export { DANCE, TECHNO, FESTIVAL, VOCAL, WAREHOUSE, TRANCE, INDIE, TRACK_IDS, TRACKS };

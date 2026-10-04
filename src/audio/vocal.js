@@ -1,4 +1,5 @@
-import { composeVocalPhrase, pitchOf, VOCAL_FORMS } from './songs/vocal-composition.js';
+import { VOCAL_FORMS } from './songs/vocal-composition.js';
+import { createSinger, LEAD } from './singer.js';
 import { createAudioMath } from './math.js';
 import { sweepFor } from './sweep.js';
 
@@ -22,8 +23,6 @@ const LEVEL = {
   pluck: 1.4,
   voice: 1,
 };
-/** Lead level per part: verses sit back, the chorus carries the song. */
-const LEAD = { intro: 0.3, verse: 0.4, pre: 0.45, chorus: 0.52, bridge: 0.46, outro: 0.28 };
 
 export function createAudioVocal({
   audio,
@@ -31,28 +30,13 @@ export function createAudioVocal({
   audioInstruments,
   audioMath = createAudioMath(audio),
 }) {
-  const phrases = new Map();
-  /** Phrases are indexed by step, with their neighbours, so legato and breaths can be decided. */
-  function phraseFor(session, kind, occurrence) {
-    const key = `${session.seed}:${kind}:${occurrence}`;
-    if (!phrases.has(key)) {
-      const phrase = composeVocalPhrase(session, kind, occurrence);
-      phrase.byStep = new Map(
-        phrase.notes.map((note, index) => [
-          note.step,
-          { note, previous: phrase.notes[index - 1], next: phrase.notes[index + 1] },
-        ]),
-      );
-      phrases.set(key, phrase);
-      if (phrases.size > 6) phrases.delete(phrases.keys().next().value);
-    }
-    return phrases.get(key);
-  }
-  /** How many sections of this name came earlier in the chapter (first chorus, final chorus...). */
-  function occurrenceOf(cyc, name, start) {
-    const form = cyc === 0 ? VOCAL_FORMS[0] : audioComposition.chapterFor(cyc).form;
-    return form.filter(([end, label]) => label === name && end <= start).length;
-  }
+  const singer = createSinger({
+    audio,
+    audioComposition,
+    audioInstruments,
+    forms: VOCAL_FORMS,
+    lead: LEAD,
+  });
   function scheduleVocalStep(step, t) {
     const bar = Math.floor(step / 16),
       si = step % 16,
@@ -71,7 +55,7 @@ export function createAudioVocal({
       progress = Math.min(1, (section.bs + si / 16) / section.len),
       dropout = pre && section.bs === section.len - 1 && si >= 12,
       phraseEnd = section.bs % 8 === 7,
-      occurrence = occurrenceOf(section.cyc, section.sec, (bar % 64) - section.bs),
+      occurrence = singer.occurrenceOf(section.cyc, section.sec, (bar % 64) - section.bs),
       final = chorus && occurrence > 0,
       half = Math.floor(section.bs / 8),
       human = (salt) => audioMath.hashRand(step, salt),
@@ -219,79 +203,19 @@ export function createAudioVocal({
     }
 
     // --- voices ---
-    if (!dropout && !audio.dangerActive) {
-      const phrase = phraseFor(session, kind, occurrence),
-        local = intro
-          ? section.bs - (section.len - phrase.bars)
-          : outro || pre
-            ? section.bs
-            : section.bs % phrase.bars,
-        hit = local >= 0 ? phrase.byStep.get(local * 16 + si) : null;
-      if (hit) {
-        const { note, previous, next } = hit,
-          gap = previous ? note.step - (previous.step + previous.len) : 99,
-          legato = gap <= 1 && Math.abs(note.midi - previous.midi) <= 7,
-          nextGap = next ? next.step - (note.step + note.len) : 99,
-          at = ts + 0.008 + (human(12) - 0.5) * 0.014,
-          d = Math.max(0.14, note.len * s16 - 0.03),
-          level = LEAD[kind] * note.vel * LEVEL.voice * (chorus ? 1 + 0.08 * (half % 2) : 1),
-          sing = {
-            syllable: note.syllable,
-            from: legato ? previous.midi : null,
-            scoop: !legato && gap >= 4 && human(7) < 0.5 ? 0.5 + human(8) * 0.5 : 0,
-            fall: nextGap >= 5 && note.len >= 4 && human(9) < 0.7 ? 0.6 + human(10) * 0.5 : 0,
-            breath: intro || outro ? 1.4 : 1,
-            reverbSend: bridge || intro || outro ? 0.34 : 0.22,
-          };
-        audioInstruments.eVoice(at, note.midi, d, level, sing);
-        if (chorus || bridge) {
-          // A second take a few cents off, slightly late, widens the lead the way doubling does.
-          audioInstruments.eVoice(at + 0.014, note.midi, d, level * 0.36, {
-            ...sing,
-            backing: true,
-            pan: -0.3,
-            cents: -6,
-            vibrato: 0.7,
-            delaySend: 0.05,
-          });
-        }
-        if ((chorus && (half % 2 === 1 || final)) || bridge)
-          audioInstruments.eVoice(at + 0.01, note.midi - 12, d, level * 0.32, {
-            ...sing,
-            type: 'tenor',
-            backing: true,
-            pan: 0.28,
-            scoop: 0,
-          });
-        if (final || (pre && local >= 2))
-          audioInstruments.eVoice(at + 0.018, pitchOf(session, note.degree + 2), d, level * 0.28, {
-            ...sing,
-            backing: true,
-            pan: 0.38,
-            cents: 4,
-            scoop: 0,
-            from: null,
-          });
-      }
-      // A soft "ooh" choir under the bridge, the final chorus and the end of the intro.
-      if (si === 0 && (bridge || final || (intro && section.bs >= 2) || (outro && section.bs < 2)))
-        voicing.forEach((note, index) =>
-          audioInstruments.eVoice(
-            t + 0.012 * index,
-            note,
-            s16 * 15,
-            (bridge ? 0.34 : final ? 0.22 : 0.26) * LEVEL.voice,
-            {
-              syllable: 'oo',
-              type: note < 58 ? 'tenor' : 'alto',
-              backing: true,
-              pan: [-0.35, 0, 0.35][index],
-              vibrato: 0.6,
-              reverbSend: 0.32,
-            },
-          ),
-        );
-    }
+    singer.sing({
+      t,
+      ts,
+      si,
+      section,
+      session,
+      kind,
+      occurrence,
+      human,
+      voicing,
+      dropout,
+      level: LEVEL.voice,
+    });
 
     // --- transitions ---
     if (si === 0) {
@@ -315,5 +239,5 @@ export function createAudioVocal({
     if (bridge && section.bs === section.len - 1 && si === 8)
       audioInstruments.eSwell(t, 8 * s16, 0.06);
   }
-  return { scheduleVocalStep, getPhraseCacheSize: () => phrases.size };
+  return { scheduleVocalStep, getPhraseCacheSize: singer.phraseCount };
 }

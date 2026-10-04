@@ -1,4 +1,4 @@
-import { BOOMER, FL, FLOOR, FR, PRISM } from '../config.js';
+import { FL, FLOOR, FR, GOLDIE, PRISM } from '../config.js';
 import { PHYSICS } from '../settings.js';
 import { clamp } from '../core/math.js';
 /** Pure fixed-step solver. Callbacks connect collisions to scoring and cosmetic effects. */
@@ -62,8 +62,8 @@ export function createGamePhysics({
           if (dx > range || dx < -range || dy > range || dy < -range) continue;
           const d2 = dx * dx + dy * dy;
           const match =
-            a.t < BOOMER &&
-            b.t < BOOMER &&
+            a.t < GOLDIE &&
+            b.t < GOLDIE &&
             (a.t === b.t || ((a.t === PRISM || b.t === PRISM) && game.phase !== 'title'));
           if (it === 0 && match && d2 < (rs + settings.mergeDistance) ** 2) {
             a.mg = b.mg = true;

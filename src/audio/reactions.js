@@ -36,6 +36,7 @@ export function createAudioReactions({
     const mel =
       audio.session.style === 'festival' ||
       audio.session.style === 'vocal' ||
+      audio.session.style === 'indie' ||
       audio.session.style === 'trance'
         ? audio.dangerActive
           ? 3500

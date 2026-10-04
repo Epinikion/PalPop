@@ -15,6 +15,7 @@ const MAXT = 10;
 const PRISM = 11;
 const CH_MAX = 14;
 const FEVER_T = 8;
+/** Retired: the bomb was taken out of the game. Its tier id and sprite stay so saves and ids hold. */
 const BOOMER = 12;
 const GOLDIE = 13;
 const ZAPPY = 14;
@@ -25,12 +26,6 @@ const SPECIALS = [
     req: 0,
     hint: 'MERGES WITH ANY PAL',
     desc: 'WILDCARD! MERGES WITH ANY PAL IT TOUCHES.',
-  },
-  {
-    t: BOOMER,
-    req: 2,
-    hint: 'BOOM! POPS NEARBY PALS',
-    desc: 'BOOMS A MOMENT AFTER LANDING AND POPS NEARBY PALS FOR POINTS.',
   },
   {
     t: GOLDIE,

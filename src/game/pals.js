@@ -1,4 +1,4 @@
-import { BOOMER, H, MAXT, PRISM, SPAWN_Y, SPECIALS, TIERS } from '../config.js';
+import { H, MAXT, PRISM, SPAWN_Y, SPECIALS, TIERS } from '../config.js';
 import { store } from '../core/storage.js';
 export function createGamePals({ game }) {
   /** @returns {import('./types.js').Pal} */
@@ -57,16 +57,10 @@ export function createGamePals({ game }) {
       game.lastSpecialDrop = game.drops;
       return PRISM;
     }
-    // A pile that has climbed into the top half, with no special for a while, is owed a Boomer.
-    if (
-      open &&
-      game.drops >= 10 &&
-      game.drops - game.lastSpecialDrop >= 25 &&
-      pileTop() < 100 &&
-      av.some((x) => x.t === BOOMER)
-    ) {
+    // A pile that has climbed into the top half, with no special for a while, is owed a wildcard.
+    if (open && game.drops >= 10 && game.drops - game.lastSpecialDrop >= 25 && pileTop() < 100) {
       game.lastSpecialDrop = game.drops;
-      return BOOMER;
+      return PRISM;
     }
     const luck = game.mut?.luck ?? 1;
     if (

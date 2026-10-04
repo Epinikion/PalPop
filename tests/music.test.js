@@ -49,7 +49,7 @@ for (const [style, id] of [
       assert.equal(audio.chapters.size, 3);
     });
 test('every catalog song has a complete registered style', () => {
-  assert.deepEqual(TRACK_IDS, [5, 6, 7, 8, 9, 10]);
+  assert.deepEqual(TRACK_IDS, [5, 6, 7, 8, 9, 10, 11]);
   const ids = new Set();
   for (const id of TRACK_IDS) {
     const song = TRACKS[id];

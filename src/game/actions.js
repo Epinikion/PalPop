@@ -609,7 +609,7 @@ export function createGameActions({
   function setTitleInfo() {
     const L = store.get('lvl', 1);
     $('#tLvl').textContent =
-      'LV ' + L + ' ' + rank(L) + ' - PALS ' + uiInterface.palCount() + '/16';
+      'LV ' + L + ' ' + rank(L) + ' - PALS ' + uiInterface.palCount() + '/15';
     $('#tNp').textContent = (audio.enabled ? 'RADIO / ' : 'PAUSED / ') + TRACKS[audio.trackId].name;
     uiInterface.renderTitle();
   }
