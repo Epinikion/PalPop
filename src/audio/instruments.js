@@ -7,6 +7,7 @@ import { createSupersaw } from './instruments/supersaw.js';
 import { createVocal } from './instruments/vocal.js';
 import { createKit } from './instruments/kit.js';
 import { createWarehouse } from './instruments/warehouse.js';
+import { createTrance } from './instruments/trance.js';
 /** Shared voice interface used by arrangements and gameplay accents. */
 export function createAudioInstruments(dependencies) {
   // One kit serves every drum voice, so its buffers are rendered once per context.
@@ -22,5 +23,6 @@ export function createAudioInstruments(dependencies) {
     ...createVocal(dependencies),
     ...kit,
     ...createWarehouse(dependencies),
+    ...createTrance(dependencies),
   };
 }

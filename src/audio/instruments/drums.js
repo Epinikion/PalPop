@@ -17,8 +17,8 @@ const GAIN = {
   ping: 1.6,
   conga: 1.3,
 };
-/** Equal-loudness gain of each kick variant: thud, punch, long. */
-const KICK = [1.17, 1.35, 1.0];
+/** Equal-loudness gain of each kick variant: thud, punch, long, clean. */
+const KICK = [1.17, 1.35, 1.0, 1.2];
 /** Where each tom variant settles, and how the old glide (f0 down to 0.55 f0) is heard. */
 const TOM_HZ = [96, 132, 176];
 const TOM_GLIDE = 0.7;

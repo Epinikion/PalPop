@@ -3,7 +3,7 @@ import { createAudioMath } from './math.js';
 import { sweepFor } from './sweep.js';
 
 /** Balance of this arrangement's voices against one another. */
-const LEVEL = { kick: 1, bass: 1.5, clap: 1.2, hat: 1, lead: 1.5, chord: 0.9, pluck: 1.4 };
+const LEVEL = { kick: 0.7, bass: 1.5, clap: 1.2, hat: 1, lead: 1.5, chord: 0.9, pluck: 1.4 };
 
 export function createAudioDance({
   audio,

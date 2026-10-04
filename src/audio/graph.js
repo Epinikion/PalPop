@@ -3,7 +3,7 @@ import { TRACKS } from './catalog.js';
 /** Level at which voices enter the music bus; the master stage supplies the remaining makeup. */
 const MUSIC_INPUT_GAIN = 0.55;
 /** Side-channel boost for the synth bus. Only content above ~220 Hz widens; bass stays centred. */
-const SYNTH_WIDTH = 1.35;
+const SYNTH_WIDTH = 2;
 
 /**
  * Mid/side stereo widener. The side signal is high-passed first, so low-mid content and bass stay
@@ -61,6 +61,7 @@ function createVoxBus(context) {
     boxy = context.createBiquadFilter(),
     presence = context.createBiquadFilter(),
     sibilance = context.createBiquadFilter(),
+    top = context.createBiquadFilter(),
     soften = context.createBiquadFilter(),
     leveler = context.createDynamicsCompressor(),
     duck = context.createGain();
@@ -74,11 +75,15 @@ function createVoxBus(context) {
   presence.type = 'peaking';
   presence.frequency.value = 3200;
   presence.Q.value = 0.8;
-  presence.gain.value = 2.5;
+  // The music bus after this one brightens by a few decibels; the voice gives most of it back.
+  presence.gain.value = -1;
   sibilance.type = 'peaking';
   sibilance.frequency.value = 5600;
   sibilance.Q.value = 1.6;
-  sibilance.gain.value = -3.5;
+  sibilance.gain.value = -5;
+  top.type = 'highshelf';
+  top.frequency.value = 7500;
+  top.gain.value = -2.5;
   soften.type = 'lowpass';
   soften.frequency.value = 11000;
   soften.Q.value = 0.6;
@@ -91,14 +96,15 @@ function createVoxBus(context) {
   lowCut.connect(boxy);
   boxy.connect(presence);
   presence.connect(sibilance);
-  sibilance.connect(soften);
+  sibilance.connect(top);
+  top.connect(soften);
   soften.connect(leveler);
   leveler.connect(duck);
   return {
     input,
     output: duck,
     duck,
-    nodes: [input, lowCut, boxy, presence, sibilance, soften, leveler, duck],
+    nodes: [input, lowCut, boxy, presence, sibilance, top, soften, leveler, duck],
   };
 }
 
@@ -130,13 +136,13 @@ export function createAudioGraph({ audio }) {
     /* a little presence and air: synthesized material needs the top octaves to sound like a record */
     const presence = audio.context.createBiquadFilter();
     presence.type = 'peaking';
-    presence.frequency.value = 3000;
-    presence.Q.value = 0.8;
-    presence.gain.value = 1.5;
+    presence.frequency.value = 3400;
+    presence.Q.value = 0.6;
+    presence.gain.value = 5;
     const air = audio.context.createBiquadFilter();
     air.type = 'highshelf';
     air.frequency.value = 7500;
-    air.gain.value = 2.5;
+    air.gain.value = 5;
     const sat = audio.context.createWaveShaper(),
       curve = new Float32Array(2048);
     for (let i = 0; i < curve.length; i++) {
@@ -252,6 +258,7 @@ export function createAudioGraph({ audio }) {
       dry = audio.context.createGain(),
       drive = audio.context.createWaveShaper(),
       duck = audio.context.createGain(),
+      melDuck = audio.context.createGain(),
       bass = audio.context.createGain(),
       mel = audio.context.createGain(),
       melLP = audio.context.createBiquadFilter(),
@@ -304,7 +311,9 @@ export function createAudioGraph({ audio }) {
     mel.connect(melLP);
     acidSh.connect(mel);
     melLP.connect(widener.input);
-    widener.output.connect(duck);
+    /* the bass bus takes the kick's full dip; the synths take the track's `pump` share of it */
+    widener.output.connect(melDuck);
+    melDuck.connect(out);
     duck.connect(out);
     if (vox) vox.output.connect(out);
     out.connect(trim);
@@ -319,6 +328,8 @@ export function createAudioGraph({ audio }) {
       dry,
       drive,
       duck,
+      melDuck,
+      pump: TRACKS[audio.trackId]?.pump ?? 1,
       bass,
       mel,
       melLP,
@@ -331,7 +342,7 @@ export function createAudioGraph({ audio }) {
       sweep,
       vox: vox?.input,
       voxDuck: vox?.duck,
-      extras: [trim, sweep, drive, ...widener.nodes, ...(vox ? vox.nodes : [])],
+      extras: [trim, sweep, drive, melDuck, ...widener.nodes, ...(vox ? vox.nodes : [])],
     };
   }
   function feed(node, dl, rv) {

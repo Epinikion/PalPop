@@ -13,7 +13,7 @@ const KIND = {
 };
 /** Balance of this arrangement's voices against one another. */
 const LEVEL = {
-  kick: 1,
+  kick: 0.75,
   bass: 1.4,
   clap: 1.1,
   hat: 1,

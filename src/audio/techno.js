@@ -219,7 +219,7 @@ export function createAudioTechno({ audio, audioComposition, audioInstruments, a
     const rumble = sec === 'PEAK' || sec === 'FINAL' ? 0.5 : sec === 'GROOVE' && bs >= 8 ? 0.28 : 0;
     const kickNow = L.kick && si % 4 === 0;
     const kickHz = audioInstruments.kickTuning(S.pc);
-    if (kickNow) audioInstruments.eKick(t, 0.95, L.duck, rumble, kickHz, 2);
+    if (kickNow) audioInstruments.eKick(t, 0.68, L.duck, rumble, kickHz, 2);
     else if (
       L.kick &&
       (sec === 'PEAK' || sec === 'FINAL') &&

@@ -9,12 +9,22 @@ const LEVEL = {
   clap: 1.2,
   hat: 1,
   lead: 1.6,
-  chord: 1.7,
-  piano: 1.8,
+  wall: 1.7,
   pluck: 1.5,
+  piano: 1.8,
 };
+/** How hard the bass leans on each sixteenth after a kick; the last one pulls into the next kick. */
+const ROLL = [0, 0.55, 0.7, 1];
+/** Accents of a three-three-two gate across eight sixteenths. */
+const GATE = [1, 0.8, 0.8, 1, 0.8, 0.8, 1, 0.8];
 
-export function createAudioFestival({
+/**
+ * Rolling, bright trance: a four-on-the-floor kick, a bass that rolls through the sixteenths
+ * after every kick, hats on every sixteenth, and a wall of supersaw (a sustained chord and a
+ * sixteenth arpeggio) that never leaves a gap in the middle of the mix. The kick ducks the bass
+ * hard and the synths barely, so the wall stays wide open.
+ */
+export function createAudioTrance({
   audio,
   audioComposition,
   audioInstruments,
@@ -29,78 +39,86 @@ export function createAudioFestival({
     }
     return phrases.get(key);
   }
-  function scheduleFestivalStep(step, t) {
+  function scheduleTranceStep(step, t) {
     const bar = Math.floor(step / 16),
       si = step % 16,
+      beat = si >> 2,
+      sub = si & 3,
       section = audioComposition.sectionAt(bar),
       session = audioComposition.chapterFor(section.cyc),
       chord = audioComposition.chordFor(bar, section.sec, section.cyc),
       s16 = session.s16,
-      ts = t + (si % 2 ? session.swing * s16 : 0),
       peak = section.sec === 'PEAK' || section.sec === 'FINAL',
+      final = section.sec === 'FINAL',
       groove = section.sec === 'GROOVE',
       build = section.sec === 'BUILD',
       rest = section.sec === 'BREAK',
       intro = section.sec === 'INTRO',
       progress = Math.min(1, (section.bs + si / 16) / section.len),
-      energy = Math.min(1, audio.hype || 0),
       phraseIndex = peak
-        ? section.cyc * 8 + (section.sec === 'FINAL' ? 2 : 0) + Math.floor(section.bs / 8)
+        ? section.cyc * 8 + (final ? 2 : 0) + Math.floor(section.bs / 8)
         : Math.floor(bar / 8),
       phrase = phraseFor(session.seed, phraseIndex),
-      color = Math.min(0.85, phrase.color + (peak ? 0.1 : 0) + energy * 0.08),
+      color = Math.min(0.9, session.color + (peak ? 0.1 : 0)),
       dropout = build && section.bs === section.len - 1 && si >= 12,
       phraseEnd = bar % 8 === 7,
       // Tiny deterministic timing and velocity drift keeps hats and plucks from sounding machined.
       human = (salt) => audioMath.hashRand(step, salt),
-      drift = (human(3) - 0.5) * 0.006,
+      drift = (human(3) - 0.5) * 0.004,
+      ts = t + drift,
       voicing = chord.notes.slice(0, 3),
-      // Move the entire theme together, preserving its melodic contour in higher keys.
       root = 60 + session.pc - (session.pc > 7 ? 12 : 0),
-      pitchOf = (degree) => root + session.mode.s[degree % 7] + Math.floor(degree / 7) * 12;
+      pitchOf = (degree) => root + session.mode.s[degree % 7] + Math.floor(degree / 7) * 12,
+      pan = sub % 2 ? 0.3 : -0.3;
     audio.bar = bar;
     audio.section = section.sec;
-    // DJ-style filter move on the whole mix: opens through the intro, closes up through builds.
     if (si % 4 === 0 && !dropout) audioInstruments.eSweep(t, sweepFor(section.sec, progress));
-    if (si === 0) audioInstruments.eSpace(t, rest ? 1.7 : build ? 1.25 : peak ? 0.9 : 1);
-    if (!rest && !dropout) {
+    if (si === 0) audioInstruments.eSpace(t, rest ? 1.6 : build ? 1.2 : peak ? 0.9 : 1);
+
+    // --- the floor: kick, clap, hats and the rolling bass ---
+    if (!rest && !dropout && !(intro && section.bs < 1)) {
       if (si % 4 === 0)
         audioInstruments.eKick(
           t,
-          (intro ? 0.44 : peak ? 0.55 : build ? 0.46 : 0.5) * LEVEL.kick,
-          intro ? 0.4 : peak ? 0.7 : 0.58,
+          (intro ? 0.45 : peak ? 0.58 : 0.52) * LEVEL.kick,
+          intro ? 0.35 : peak ? 0.6 : 0.5,
           0,
           audioInstruments.kickTuning(session.pc),
-          peak ? 1 : 0,
+          3,
         );
       if (!intro && (si === 4 || si === 12))
-        audioInstruments.eClap(t, (peak ? 0.17 : 0.12) * LEVEL.clap);
-      if (!build && si % 4 === 2)
+        audioInstruments.eClap(t, (peak ? 0.16 : 0.11) * LEVEL.clap);
+      if (sub === 2) {
+        if (!build || progress < 0.7)
+          audioInstruments.eHat(
+            ts,
+            true,
+            (intro ? 0.034 : peak ? 0.07 : 0.055) * (0.9 + 0.2 * human(1)) * LEVEL.hat,
+            0.22,
+          );
+      } else if (!intro && (peak || build || sub % 2 === 1)) {
+        const level = peak ? 1 : build ? 0.55 + progress * 0.45 : 0.7;
         audioInstruments.eHat(
-          ts + drift,
-          true,
-          (intro ? 0.032 : peak ? 0.075 : 0.058) * (0.9 + 0.2 * human(1)) * LEVEL.hat,
-          0.22,
-          0.3,
-        );
-      else if (!intro && phrase.hatMask[si])
-        audioInstruments.eHat(
-          ts + drift,
+          ts,
           false,
-          0.03 * (0.8 + 0.4 * human(2)) * LEVEL.hat,
-          -0.25,
-          0.6,
+          0.03 * session.hats[sub] * level * (0.8 + 0.4 * human(2)) * LEVEL.hat,
+          pan,
         );
-      if ((peak || audio.feverOn) && si % 2 === 1)
-        audioInstruments.eShaker(ts + drift, 0.022 * (0.8 + 0.4 * human(4)), -0.3, 0.45);
-      if (phrase.bass.includes(si) && (!intro || section.bs >= 2))
+      }
+      if (peak && sub % 2 === 1)
+        audioInstruments.eShaker(ts, 0.02 * (0.8 + 0.4 * human(4)), -pan, 0.45);
+      // The bass plays the sixteenths between the kicks and leans into the next one.
+      if (sub > 0 && (!intro || section.bs >= 2) && (!build || progress >= 0.2)) {
+        const leap = sub === 3 && session.leaps.includes(beat) ? 12 : 0,
+          weight = peak ? 1 : groove ? 0.85 : 0.65;
         audioInstruments.eDanceBass(
           ts,
-          chord.bass,
-          s16 * 1.5,
-          (build ? 0.2 - progress * 0.08 : 0.23) * LEVEL.bass,
-          build ? progress * 0.65 : 0.65,
+          chord.bass + leap,
+          s16 * 1.35,
+          0.265 * ROLL[sub] * weight * LEVEL.bass,
+          build ? 0.3 + progress * 0.4 : 0.5,
         );
+      }
       if (build && progress >= 0.35) {
         const interval = progress >= 0.85 ? 1 : progress >= 0.7 ? 2 : 4;
         if (si % interval === 0)
@@ -110,23 +128,47 @@ export function createAudioFestival({
       if ((peak || groove) && phraseEnd && si >= 10 && (si === 10 || si >= 12))
         audioInstruments.eSnare(ts, 0.03 + (si - 10) * 0.007, 0.95 + (si - 10) * 0.05);
     }
+
+    // --- the wall: sustained chord and a sixteenth arpeggio, with the hook on top ---
     if (!dropout) {
       const note = phrase.melody.find(
           (event) => event[0] === ((peak ? section.bs : bar) % 8) * 16 + si,
         ),
-        hook = peak && note;
-      // Piano carries quieter passages and answers the hook in every eighth bar.
-      if (!rest && phrase.piano.includes(si) && !hook && (!peak || bar % 4 === 3 || si === 6))
-        audioInstruments.eFestivalPiano(
-          ts,
-          voicing,
-          s16 * 2.5,
-          0.32 * LEVEL.piano,
-          build ? progress * 0.7 : 0.65,
-        );
+        hook = peak && note,
+        arp = (shift, level, gate = 1) => {
+          const index = session.arp[si];
+          audioInstruments.eTranceArp(
+            ts,
+            voicing[index % 3] + 12 * (1 + Math.floor(index / 3) + shift),
+            s16 * 2.1,
+            level * gate * LEVEL.pluck,
+            color,
+            pan,
+          );
+        };
+      if (si === 0 && bar % 2 === 0) {
+        if (peak) audioInstruments.eTranceChord(t, voicing, s16 * 31, 0.18 * LEVEL.wall, color);
+        else if (groove)
+          audioInstruments.eTranceChord(t, voicing, s16 * 31, 0.08 * LEVEL.wall, 0.4);
+        else if (intro) audioInstruments.eTranceChord(t, voicing, s16 * 31, 0.07 * LEVEL.wall, 0.3);
+        else if (rest) audioInstruments.eTranceChord(t, voicing, s16 * 31, 0.1 * LEVEL.wall, 0.35);
+        else if (build && progress >= 0.35)
+          audioInstruments.eTranceChord(
+            t,
+            voicing,
+            s16 * 31,
+            (0.05 + progress * 0.07) * LEVEL.wall,
+            progress,
+          );
+      }
+      if (peak) arp(final && si % 4 === 3 ? 1 : 0, 0.115, GATE[si % 8]);
+      else if (groove && si % 2 === 0) arp(0, 0.06, GATE[si % 8]);
+      else if (intro && si % 4 === 2) arp(0, 0.06);
+      else if (build && progress >= 0.3 && si % 2 === 0)
+        arp(progress > 0.65 ? 1 : 0, 0.05 + progress * 0.06);
+      else if (rest && section.bs >= 2 && si % 2 === 1) arp(0, 0.06 + progress * 0.04);
       if (rest && si % 2 === 0) {
-        // Broken-chord piano: low, high, middle, high - the breakdown's heartbeat. Once the theme
-        // enters it stays in the left hand, below the melody.
+        // Broken-chord piano: low, high, middle, high, the breakdown's heartbeat.
         const slot = (si / 2) % 4,
           pick = [0, 2, 1, 2][slot];
         audioInstruments.eFestivalPiano(
@@ -139,7 +181,7 @@ export function createAudioFestival({
         );
       }
       // The breakdown replays the hook on piano, so the song stays recognisable while it breathes.
-      if (rest && note && section.bs >= 2) {
+      if (rest && note && section.bs >= 2)
         audioInstruments.eFestivalPiano(
           ts,
           [pitchOf(note[1])],
@@ -147,63 +189,15 @@ export function createAudioFestival({
           0.34 * note[3] * LEVEL.piano,
           0.7,
         );
-      }
       if (rest && si === 0 && section.bs % 2 === 0)
         audioInstruments.ePad(t, voicing, s16 * 30, 0.06, true);
-      if (rest && si % 2 === 1 && section.bs >= 2)
-        audioInstruments.eSawPluck(
-          ts + drift,
-          [voicing[(si >> 1) % 3] + 12 + (si % 4 === 3 ? 12 : 0)],
-          s16 * 1.6,
-          (0.09 + progress * 0.05) * LEVEL.pluck,
-          0.45,
-          (si % 4 === 1 ? -1 : 1) * 0.3,
-        );
-      if (build && progress >= 0.3 && si % 2 === 0)
-        audioInstruments.eSawPluck(
-          ts,
-          [voicing[(si >> 1) % 3] + 12 + (progress > 0.65 ? 12 : 0)],
-          s16 * 1.4,
-          (0.08 + progress * 0.09) * LEVEL.pluck,
-          0.4 + progress * 0.4,
-          (si % 4 === 0 ? -1 : 1) * 0.3,
-        );
       if (build && progress >= 0.5 && si % (progress >= 0.8 ? 2 : 4) === 2)
         audioInstruments.eFestivalChord(
           ts,
           voicing,
           s16 * 1.2,
-          (0.1 + progress * 0.12) * LEVEL.chord,
+          (0.1 + progress * 0.12) * LEVEL.wall,
           progress,
-        );
-      if (peak && si === 2 && bar % 4 !== 3)
-        audioInstruments.eFestivalChord(ts, voicing, s16 * 2.4, 0.2 * LEVEL.chord, color);
-      // Sustained chord pad: sidechain pumping gives the drop its breathing body.
-      if ((peak || groove) && si === 0 && bar % 2 === 0)
-        audioInstruments.eFestivalChord(
-          t,
-          voicing,
-          s16 * 30,
-          (peak ? 0.1 : 0.06) * LEVEL.chord,
-          peak ? color : 0.3,
-        );
-      if (groove && (si === 6 || si === 14) && bar % 2 === 1)
-        audioInstruments.eSawPluck(
-          ts,
-          [voicing[si === 6 ? 2 : 1] + 12],
-          s16 * 2,
-          0.1 * LEVEL.pluck,
-          0.5,
-          si === 6 ? 0.3 : -0.3,
-        );
-      if (section.sec === 'FINAL' && si % 4 === 3)
-        audioInstruments.eSawPluck(
-          ts + drift,
-          [voicing[(si >> 2) % 3] + 24],
-          s16 * 1.5,
-          0.08 * LEVEL.pluck,
-          0.8,
-          (si % 8 === 3 ? -1 : 1) * 0.35,
         );
       if (hook)
         audioInstruments.eFestivalLead(
@@ -214,6 +208,8 @@ export function createAudioFestival({
           color,
         );
     }
+
+    // --- structure: risers, crashes, impacts and the hand-over to the next chapter ---
     if (si === 0) {
       // A build's riser covers its last bars and lands on the beat before the drop.
       if (build && section.bs === Math.max(0, section.len - 3))
@@ -237,5 +233,5 @@ export function createAudioFestival({
     if (peak && phraseEnd && si === 8 && audioComposition.sectionAt(bar + 1).sec !== section.sec)
       audioInstruments.eSwell(t, 8 * s16, 0.06);
   }
-  return { scheduleFestivalStep, getPhraseCacheSize: () => phrases.size };
+  return { scheduleTranceStep, getPhraseCacheSize: () => phrases.size };
 }

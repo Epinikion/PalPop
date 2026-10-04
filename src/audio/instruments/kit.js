@@ -78,8 +78,9 @@ export function createKit({ audio, audioGraph, audioMath }) {
     audioGraph.releaseVoice(source, outlet, extras);
   }
   /**
-   * Kick, retuned to `hz` (the kit's kicks settle on 46 Hz) and ducking the bass and synth buses.
-   * `duck` is how deep the sidechain dips; `variant` picks thud (0), punch (1) or long (2);
+   * Kick, retuned to `hz` (the kit's kicks settle on 46 Hz) and ducking the bass bus fully and the synth
+   * bus by the song's `pump` share.
+   * `duck` is how deep the sidechain dips; `variant` picks thud (0), punch (1), long (2) or clean (3);
    * `rumble` feeds the kick into the rumble bus where the song has one.
    */
   function eKitKick(t, v, duck, hz = KICK_HZ, variant, rumble = 0) {
@@ -89,6 +90,11 @@ export function createKit({ audio, audioGraph, audioMath }) {
         d = song.duck.gain;
       d.setValueAtTime(1 - duck, t);
       d.setTargetAtTime(1, t + 0.012, 0.075);
+      if (song.melDuck) {
+        const share = duck * (song.pump ?? 1);
+        song.melDuck.gain.setValueAtTime(1 - share, t);
+        song.melDuck.gain.setTargetAtTime(1, t + 0.012, 0.075);
+      }
       if (song.voxDuck) {
         song.voxDuck.gain.setValueAtTime(1 - duck * 0.3, t);
         song.voxDuck.gain.setTargetAtTime(1, t + 0.012, 0.09);

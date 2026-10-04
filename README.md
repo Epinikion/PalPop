@@ -1,14 +1,15 @@
 # Pal Pop
 
-A pixel-art merge game with slippery physics, responsive electronic gameplay sounds and five continuously evolving Web Audio soundtracks:
+A pixel-art merge game with slippery physics, responsive electronic gameplay sounds and six continuously evolving Web Audio soundtracks:
 
 - **NEON CIRCUIT** — pumping electro with sidechained bass, supersaw stabs and plucked arpeggios.
 - **LIVE TECHNO** — rolling bass, acid lines and dub chords.
 - **WAREHOUSE** — dark, drum-led techno: a hard kick, rolling rumble, hats and claps rendered like samples, percussion that drifts against the beat, and almost no synth.
 - **GOLDEN HOUR** — melodic vocal house: warm, wordless sung melodies over piano, plucks and a soft four-on-the-floor, with verses, builds, sing-along choruses and a bridge.
+- **HORIZON LINE** — bright, wide trance at 138–144 BPM: a bass that rolls into every kick, hats on every sixteenth, a wall of supersaws with a sixteenth arpeggio, long builds and short breakdowns. Voiced from a measurement of a Tomorrowland live set (see _Reference_).
 - **SKYLINE RUSH** — melodic festival house: piano, a seven-voice supersaw hook, DJ-style builds, silent beats before the drops and a piano breakdown that replays the theme.
 
-All five are mixed and mastered like records: about -13 LUFS at the default volume, glued by bus and master compression, with a wide synth bus, sidechain pumping and a high-pass sweep through intros and builds.
+All six are mixed and mastered like records: about -13 LUFS at the default volume, glued by bus and master compression, with a wide synth bus, sidechain pumping and a high-pass sweep through intros and builds.
 
 The game is written as native ES modules. Physics, game rules, rendering, interface, composition, arrangement and instrument synthesis are separate modules. There is no bundler and no runtime dependency.
 
@@ -21,7 +22,7 @@ sw.js, precache.js    offline support; precache.js is generated
 src/                  game, audio, render and UI modules
 styles/               game.css
 assets/fonts/         bundled Press Start 2P font and its licence
-tools/                dev server, checks, cache generator, audio check page, pixel designer
+tools/                dev server, checks, cache generator, audio check page, mix analysis, pixel designer
 tests/                node:test suites and fixtures
 ```
 
@@ -124,13 +125,38 @@ The four older arrangements keep their vocabulary (`eKick`, `eHat`, `eClap`, `eS
 
 WAREHOUSE (`WAREHOUSE`, ID 9) is dark techno at 132–138 BPM, built the way techno records are: around the drums. Its kit is the one above, played directly through the `eKit*` voices. The rumble is a low tail swelling between the kicks, cut into a pulse by the kick's sidechain; the bass is a saturated reese; the room is slow filtered noise. `src/audio/songs/warehouse-composition.js` draws a chapter's rhythm material once (hat velocity map, rim, a percussion cycle that is 10, 12 or 14 steps long and so drifts against the bar, metal hits, bass mask, stabs, ping melody) and the arrangement (`src/audio/warehouse.js`) adds, filters and removes layers around it: kick-only intro, groove, peak, a kick-less breakdown with pad and pings, a build with a quickening snare roll and a silent last beat, and the final peak.
 
+### HORIZON LINE
+
+HORIZON LINE (`TRANCE`, ID 10) is trance at 138–144 BPM in a major or minor key (about 60 % major). `src/audio/songs/trance-composition.js` draws a chapter's material once: a chord loop for each part of the song (two bars a chord), a sixteenth-note arpeggio over the triad, hat velocities and which beats the bass leaps an octave on. The arrangement (`src/audio/trance.js`) builds the rhythm section the measurements describe: a tuned clean kick (a fourth kit variant with almost nothing above the sub but the click), a bass that plays the three sixteenths after every kick and leans hardest into the next one (`eDanceBass`, notes held past their step so they overlap), closed hats on every sixteenth except the off-beat eighths, which are open. Over it sits the wall: a five-saw chord held for two bars (`eTranceChord`) and an arpeggio of overlapping saws (`eTranceArp`), with the festival hook (`eFestivalLead`) on top. The kick ducks the bass hard and the synths barely (`pump` 0.2 in the catalog), so the middle of the mix never opens up. Breakdowns are short and only about 3 dB quieter than drops: a held chord, broken-chord piano, the hook replayed on piano and the arpeggio coming back.
+
+### Reference
+
+The mix and the trance track follow a measurement of a 62-minute live set (Armin van Buuren, Tomorrowland 2026, as a 56 kbps MP3, so nothing above about 11 kHz could be read). It was measured, not listened to, with the same analysis for every file (`tools/reference-report.mjs`). What the set showed, and what changed because of it:
+
+- **Tempo.** Mostly 137–140 BPM, 144–145 in the last third; four-on-the-floor throughout. HORIZON LINE uses 138–144.
+- **Key.** No single key; the set moves through many, roughly 60 % major frames. Sessions pick a key and mode per song.
+- **Loudness.** -13.0 LUFS integrated, a loudness range of only 2.2 LU, and breakdowns about 3 dB under the drops. The soundtracks already sat at -13 LUFS; HORIZON LINE's breakdowns now follow the 3 dB figure.
+- **Tonal balance.** In the kick-driven passages the set carries 3–7 dB more energy between 500 Hz and 10 kHz than our tracks did, and a little less sub. The shared music bus now has +5 dB of presence (3.4 kHz) and +5 dB of air (7.5 kHz shelf, up from +1.5 and +2.5), the kick sits 1.5–3 dB lower in the arrangements, and the vocal bus gives most of the extra brightness back so GOLDEN HOUR's voice is unchanged (within 0.3 dB).
+- **Width.** The mids and highs are close to uncorrelated (side/mid about -2 dB between 500 Hz and 5 kHz). The synth bus's side signal is doubled (`SYNTH_WIDTH` 2); bass and kick stay centred.
+- **Pumping.** The mids swing by only 1.6 dB across a beat, far less than a hard sidechain gives. The kick still ducks the bass bus fully, but the synth bus now takes only a share of the dip (`pump` per track in `src/audio/catalog.js`: 0.2 to 0.6, 1 for WAREHOUSE).
+- **Rhythm.** The bass leans into the next kick; hats are continuous sixteenths; the mids stay nearly flat across a beat. That is what HORIZON LINE's arrangement does.
+
+Limits: this is one set seen through a low-bitrate MP3. The measurements say how bright, wide, loud and busy it is, not how it sounds; whether a result sounds good is for ears.
+
+```sh
+node tools/reference-report.mjs preview.wav                 # compare any file with the reference
+node tools/reference-report.mjs set.mp3 --start 300 --seconds 600
+```
+
+It prints tempo, the level while the kick plays, seven band levels next to the reference, side/mid per band and the swing of each band across one beat. Compare tracks of similar loudness.
+
 ### Mix and mastering
 
-Signal flow: voices feed the dry, bass and synth buses of the current song. The kick ducks the bass and synth buses (instant dip, exponential recovery). The synth bus passes a mid/side widener whose side signal is high-passed at 220 Hz, so bass and low mids stay centred and the mix still folds down cleanly to mono. Each song's output passes its loudness `trim` and the DJ high-pass, then the shared music bus: low cut, bass shelf, presence and air EQ, soft saturation and a slow-attack glue compressor. The master adds makeup gain (`MASTER_GAIN`), a compressor, a tanh soft clipper and a limiter, so the output stays below -2 dBFS.
+Signal flow: voices feed the dry, bass and synth buses of the current song. The kick ducks the bass bus fully and the synth bus by the song's `pump` share (instant dip, exponential recovery). The synth bus passes a mid/side widener whose side signal is high-passed at 220 Hz, so bass and low mids stay centred and the mix still folds down cleanly to mono. Each song's output passes its loudness `trim` and the DJ high-pass, then the shared music bus: low cut, bass shelf, presence (+5 dB at 3.4 kHz) and air (+5 dB shelf at 7.5 kHz) EQ, soft saturation and a slow-attack glue compressor. The master adds makeup gain (`MASTER_GAIN`), a compressor, a tanh soft clipper and a limiter, so the output stays below -2 dBFS.
 
 Dry gameplay effects bypass the music bus and enter at the master, scaled by `SFX_GAIN`. They sit about 11 LU below the music with transient peaks close to the music's.
 
-Each arrangement keeps a `LEVEL` table with the balance of its voices (kick, bass, clap, hats, lead, chords, piano, plucks). Change it there, not in the shared voices, so one track's balance never shifts another's. A track's overall level is its catalog `trim`; the shared makeup is `MASTER_GAIN`.
+Each arrangement keeps a `LEVEL` table with the balance of its voices (kick, bass, clap, hats, lead, chords or wall, piano, plucks). Change it there, not in the shared voices, so one track's balance never shifts another's. A track's overall level is its catalog `trim`; the shared makeup is `MASTER_GAIN`.
 
 Arrangements follow live-set dramaturgy. Intros open a DJ high-pass filter over four-on-the-floor drums. Builds close the filter, add a riser, a plucked arpeggio, quickening chord stabs and a snare roll, swell into a reverse cymbal and leave the last beat silent. Drops land with a crash and an impact, and every eighth bar gets a crash or a snare fill. Breakdowns open the reverb (`eSpace`); in SKYLINE RUSH the piano replays the hook there. Every 64 bars, when the material renews, an impact and a swell hand the song over like a DJ mixing into the next track.
 
@@ -159,7 +185,7 @@ npm run verify
 
 The Node tests cover original physics trajectories at 30/60/120 FPS, overlap resolution, chain merges, stacks, shakes, injectable balance settings, the techno composition, evolving electro/festival phrases, 10,000 bounded phrase renewals, 2,000 renewed chapters, 24 chapters of all arrangements, audible festival A/B/reprise development, immediate gameplay feedback, impact throttling, essential cue capacity, coalesced musical rewards, mute/retry behavior, and save compatibility. Baselines in `tests/fixtures/` pin the techno composition and the physics trajectories; tests import the actual modules directly.
 
-`tests/vocal.test.js` covers the vocal song: deterministic sessions and valid forms, singable parts (range, steps, chord tones on strong beats, rests, density), the returning hook, the voice's formants, vibrato and soft onset, cleanup and the arrangement's silences. `tests/warehouse.test.js` covers the techno track: the kit is deterministic, normalised and click-free, kicks have a 46 Hz fundamental, punch and a finite tail, hats are bright and claps sit in the mids, each hit is one cleaned-up voice, the kick retunes and ducks, and the arrangement keeps its floor, silent beat, drop and drifting percussion. `tests/mix.test.js` covers the mix: the master chain's bounds, a reachability check that every song-bus node ends in the output, per-song trims, the sweep curve, filter and silent-beat behaviour of all three arrangements, supersaw symmetry and cleanup, the drum voices' mapping onto the kit (kick variants and tuning, the rumble feed, toms, percussion, crashes), the kick's sidechain envelope and the WAV analyzer.
+`tests/vocal.test.js` covers the vocal song: deterministic sessions and valid forms, singable parts (range, steps, chord tones on strong beats, rests, density), the returning hook, the voice's formants, vibrato and soft onset, cleanup and the arrangement's silences. `tests/warehouse.test.js` covers the techno track: the kit is deterministic, normalised and click-free, kicks have a 46 Hz fundamental, punch and a finite tail, hats are bright and claps sit in the mids, each hit is one cleaned-up voice, the kick retunes and ducks, and the arrangement keeps its floor, silent beat, drop and drifting percussion. `tests/mix.test.js` covers the mix: the master chain's bounds, a reachability check that every song-bus node ends in the output, per-song trims, the sweep curve, filter and silent-beat behaviour of all three arrangements, supersaw symmetry and cleanup, the drum voices' mapping onto the kit (kick variants and tuning, the rumble feed, toms, percussion, crashes), the kick's sidechain envelope and the WAV analyzer. `tests/trance.test.js` covers HORIZON LINE: deterministic, valid sessions (about 60 % major), chapters that keep key and tempo, the tuned clean kick and its silent beat before drops, a bass that rolls on every sixteenth after the kick and never on it, hats on every sixteenth, a gap-free arpeggio and chord wall, the drop and the breakdown, and the two new voices. The `mix` tests also cover the synth bus's pump share.
 
 For actual Web Audio rendering in a browser, open `tools/audio-check.html` and press **RUN AUDIO CHECKS**. It renders all songs at several sections, additional seeds, and busy gameplay through the live compressor/limiter and reactive filter. It checks finite samples, clipping, released voices, required cues, and freeze/recovery/death transitions. Choose a soundtrack and export music or music with gameplay feedback using the preview buttons. Festival previews span 48 bars, including intro, build, drop, break and another drop. Automated checks establish signal/runtime behavior; listening establishes musical taste.
 
@@ -172,10 +198,10 @@ node tools/analyze-wav.mjs skyline-rush.wav --bpm 127
 ffmpeg -i skyline-rush.wav -af ebur128=peak=true -f null -   # integrated loudness (LUFS) and true peak
 ```
 
-`analyze-wav.mjs` prints, for every bar, RMS and peak in dBFS, the low-mid, high-mid and top-end balance relative to the 20-200 Hz band, and the side/mid ratio. The shipped mixes aim at:
+`tools/reference-report.mjs` compares a file with the reference set (see _Reference_). `analyze-wav.mjs` prints, for every bar, RMS and peak in dBFS, the low-mid, high-mid and top-end balance relative to the 20-200 Hz band, and the side/mid ratio. The shipped mixes aim at:
 
 - about -13 to -14 LUFS integrated, peaks below -2 dBFS, drops about 4 dB louder than breakdowns;
-- in drops, relative to the low band: low mids about -8 dB, high mids about -15 dB, top end about -18 dB;
-- a side/mid ratio around -15 dB in SKYLINE RUSH's drops (a wide hook over a centred kick and bass).
+- in drops, relative to the low band (20-200 Hz): low mids about -8 dB, high mids about -12 dB, top end about -14 dB (brighter than before; the reference set is brighter still);
+- a side/mid ratio around -10 dB in SKYLINE RUSH's drops (a wide hook over a centred kick and bass); HORIZON LINE's mids sit near -2 dB, like the reference.
 
 After changing voices or levels, render the previews again and compare. Set the master first, then each track's `trim`, then the `LEVEL` tables.

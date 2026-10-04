@@ -51,9 +51,10 @@ test('every song bus node reaches the master, and each style gets its loudness t
     for (const node of context.nodes)
       if (node.kind !== 'analyser')
         assert(reaches(node, context.destination), `${TRACKS[id].name}: ${node.kind} is dangling`);
-    // The synth bus passes the stereo widener, whose side path is high-passed.
-    const mono = audio.graph.song.mel;
-    assert(reaches(mono, audio.graph.song.duck));
+    // The synth bus passes the stereo widener, whose side path is high-passed, and its own duck.
+    const { mel, bass, duck, melDuck } = audio.graph.song;
+    assert(reaches(mel, melDuck) && reaches(bass, duck));
+    assert.equal(audio.graph.song.pump, TRACKS[id].pump ?? 1);
     assert(context.nodes.some((node) => node.kind === 'merger'));
   }
 });
@@ -188,11 +189,18 @@ test('supersaw voices are wide but symmetric, and one cleanup releases every osc
 });
 
 /** The drum voices on a recording rig: every hit's source, outlet and playback rate. */
-function drumRig({ rum = false } = {}) {
+function drumRig({ rum = false, pump = 1 } = {}) {
   const context = fakeContext(),
     duck = context.createGain(),
     cleanups = [],
-    song = { dry: context.createGain(), duck, rum: rum ? context.createGain() : null },
+    melDuck = context.createGain(),
+    song = {
+      dry: context.createGain(),
+      duck,
+      melDuck,
+      pump,
+      rum: rum ? context.createGain() : null,
+    },
     audio = { context, graph: { song }, stemFlash: {} },
     dependencies = {
       audio,
@@ -200,7 +208,15 @@ function drumRig({ rum = false } = {}) {
       audioGraph: { feed() {}, releaseVoice: (...args) => cleanups.push(args) },
     },
     kit = createKit(dependencies);
-  return { context, duck, cleanups, song, drums: createDrums({ ...dependencies, kit }), kit };
+  return {
+    context,
+    duck,
+    melDuck,
+    cleanups,
+    song,
+    drums: createDrums({ ...dependencies, kit }),
+    kit,
+  };
 }
 
 test('the kick dips the synth bus instantly and lets it breathe back exponentially', () => {
@@ -214,8 +230,19 @@ test('the kick dips the synth bus instantly and lets it breathe back exponential
   assert(Math.abs(cleanups[0][0].playbackRate.value - 55 / KICK_HZ) < 1e-9, 'tuned to the key');
 });
 
+test('the kick ducks the bass bus fully and the synth bus by the song pump share', () => {
+  for (const pump of [1, 0.3, 0]) {
+    const { drums, duck, melDuck } = drumRig({ pump });
+    drums.eKick(5, 0.5, 0.7, 0, 55, 1);
+    assert.deepEqual(duck.gain.calls[0].slice(0, 3), ['set', 1 - 0.7, 5]);
+    const [dip, release] = melDuck.gain.calls;
+    assert(Math.abs(dip[1] - (1 - 0.7 * pump)) < 1e-12 && dip[2] === 5);
+    assert(release[0] === 'target' && release[1] === 1 && release[3] === 0.075);
+  }
+});
+
 test('kick variants hold their loudness and the rumble feed rides on the kick', () => {
-  const levels = [0, 1, 2].map((variant) => {
+  const levels = [0, 1, 2, 3].map((variant) => {
       const { drums, cleanups } = drumRig();
       drums.eKick(1, 0.5, 0, 0, undefined, variant);
       return cleanups[0][1].gain.value;

@@ -34,7 +34,9 @@ export function createAudioReactions({
       audio.graph.gG.gain.setTargetAtTime(ended ? 0.78 : 1, t, ended ? 0.6 : 0.1);
     }
     const mel =
-      audio.session.style === 'festival' || audio.session.style === 'vocal'
+      audio.session.style === 'festival' ||
+      audio.session.style === 'vocal' ||
+      audio.session.style === 'trance'
         ? audio.dangerActive
           ? 3500
           : 9000 + Math.min(1, audio.hype) * 1500 + (audio.feverOn ? 500 : 0)

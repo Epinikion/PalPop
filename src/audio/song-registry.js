@@ -16,8 +16,20 @@ import {
   WAREHOUSE_FORMS,
 } from './songs/warehouse-composition.js';
 import { createAudioWarehouse } from './warehouse.js';
+import {
+  composeTranceSession,
+  renewTranceChapter,
+  TRANCE_FORMS,
+} from './songs/trance-composition.js';
+import { createAudioTrance } from './trance.js';
 /** One registry connects a style's composition, chapter renewal, and arrangement. */
 export const SONG_STYLES = Object.freeze({
+  trance: {
+    compose: composeTranceSession,
+    renewChapter: renewTranceChapter,
+    introForm: TRANCE_FORMS[0],
+    createArrangement: (deps) => createAudioTrance(deps).scheduleTranceStep,
+  },
   warehouse: {
     compose: composeWarehouseSession,
     renewChapter: renewWarehouseChapter,
