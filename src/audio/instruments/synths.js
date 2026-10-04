@@ -1,4 +1,6 @@
+import { createSupersaw } from './supersaw.js';
 export function createSynths({ audio, audioGraph, audioMath }) {
+  const { superSaw } = createSupersaw({ audio, audioGraph, audioMath });
   /* bass: octave-up saw for phone speakers + pure sub sine. subOnly=long sub notes (intro / break) */
   function eBass(t, n, d, acc, vol, subOnly) {
     const sources = [],
@@ -79,136 +81,87 @@ export function createSynths({ audio, audioGraph, audioMath }) {
     audioGraph.releaseVoice(o, p);
   }
   /* Wide saw pad; `bright` opens the filter for breakdowns and builds. */
+  /**
+   * The four melodic voices of the techno styles are detuned saw stacks, swept by a resonant filter and
+   * saturated: wide, buzzing and a little different every time, the way an analog synth sounds.
+   */
   function ePad(t, notes, d, vol, bright) {
-    const sources = [],
-      lp = audio.context.createBiquadFilter(),
-      g = audio.context.createGain();
-    lp.type = 'lowpass';
-    lp.Q.value = 0.7;
-    lp.frequency.setValueAtTime(bright ? 2200 : 1000, t);
-    lp.frequency.linearRampToValueAtTime(bright ? 4600 : 1900, t + d * 0.8);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(vol, t + 0.5);
-    g.gain.setValueAtTime(vol, t + d - 0.05);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.7);
-    notes.forEach((n, i) => {
-      for (const det of [-13, 0, 13]) {
-        const o = audio.context.createOscillator(),
-          p = audio.context.createStereoPanner();
-        o.type = 'sawtooth';
-        o.frequency.value = audioMath.midi(n);
-        o.detune.value = det + i * 1.7;
-        p.pan.value = det === 0 ? 0 : (det > 0 ? 1 : -1) * (i % 2 ? 0.75 : 0.5);
-        o.connect(p);
-        p.connect(lp);
-        o.start(t);
-        o.stop(t + d + 0.75);
-        sources.push(o);
-      }
+    superSaw(t, notes, d, vol * 2.4, {
+      voices: 5,
+      detune: 1.1,
+      width: 0.9,
+      hp: 150,
+      cut: bright ? [2400, 5200] : [1300, 2600],
+      fall: d * 0.8,
+      q: 0.9,
+      attack: 0.5,
+      sustain: 1,
+      release: 0.7,
+      delaySend: 0.12,
+      reverbSend: 0.4,
+      drive: 1.5,
+      drift: 4,
     });
-    lp.connect(g);
-    g.connect(audio.graph.song.mel);
-    audioGraph.feed(g, 0.12, 0.4);
-    audio.stemFlash.synth = 0.2;
-    audioGraph.releaseVoice(sources[0], g, sources.slice(1));
   }
   function ePluck(t, n, v, pan, len) {
-    const f = audioMath.midi(n),
-      o = audio.context.createOscillator(),
-      o2 = audio.context.createOscillator(),
-      lp = audio.context.createBiquadFilter(),
-      g = audio.context.createGain(),
-      p = audio.context.createStereoPanner();
-    o.type = 'sawtooth';
-    o2.type = 'square';
-    o.frequency.value = f;
-    o2.frequency.value = f * 1.006;
-    lp.type = 'lowpass';
-    lp.Q.value = 4;
-    lp.frequency.setValueAtTime(Math.min(8500, f * 7), t);
-    lp.frequency.exponentialRampToValueAtTime(f * 1.5, t + len);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(v, t + 0.003);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + len + 0.05);
-    p.pan.value = pan;
-    o.connect(lp);
-    o2.connect(lp);
-    lp.connect(g);
-    g.connect(p);
-    p.connect(audio.graph.song.mel);
-    audioGraph.feed(p, 0.4, 0.14);
-    o.start(t);
-    o2.start(t);
-    o.stop(t + len + 0.1);
-    o2.stop(t + len + 0.1);
-    audio.stemFlash.synth = 0.12;
-    audioGraph.releaseVoice(o, g, [o2, p]);
+    const f = audioMath.midi(n);
+    superSaw(t, [n], len, v * 2.6, {
+      voices: 3,
+      detune: 0.9,
+      width: 0.6,
+      hp: 260,
+      cut: [Math.min(8500, f * 9), f * 1.6],
+      fall: len,
+      q: 4.5,
+      attack: 0.003,
+      sustain: 0.15,
+      release: 0.06,
+      delaySend: 0.4,
+      reverbSend: 0.14,
+      pan,
+      pulse: true,
+      drive: 2.2,
+      drift: 3,
+    });
   }
   function eLead(t, n, len, v) {
-    const f = audioMath.midi(n),
-      o = audio.context.createOscillator(),
-      o2 = audio.context.createOscillator(),
-      lp = audio.context.createBiquadFilter(),
-      g = audio.context.createGain(),
-      p = audio.context.createStereoPanner();
-    o.type = 'sawtooth';
-    o2.type = 'triangle';
-    o.frequency.value = f;
-    o2.frequency.value = f;
-    o.detune.value = 7;
-    lp.type = 'lowpass';
-    lp.Q.value = 2;
-    lp.frequency.setValueAtTime(Math.min(7000, f * 8), t);
-    lp.frequency.exponentialRampToValueAtTime(Math.min(3200, f * 3), t + len);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(v, t + 0.008);
-    g.gain.setValueAtTime(v, t + len * 0.7);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + len + 0.16);
-    p.pan.value = 0.12;
-    o.connect(lp);
-    o2.connect(lp);
-    lp.connect(g);
-    g.connect(p);
-    p.connect(audio.graph.song.mel);
-    audioGraph.feed(p, 0.42, 0.24);
-    o.start(t);
-    o2.start(t);
-    o.stop(t + len + 0.2);
-    o2.stop(t + len + 0.2);
-    audio.stemFlash.synth = 0.16;
-    audioGraph.releaseVoice(o, g, [o2, p]);
+    const f = audioMath.midi(n);
+    superSaw(t, [n], len, v * 2.6, {
+      voices: 3,
+      detune: 0.8,
+      width: 0.35,
+      hp: 180,
+      cut: [Math.min(7500, f * 9), Math.min(3400, f * 3.2)],
+      fall: len,
+      q: 2.2,
+      attack: 0.008,
+      sustain: 0.9,
+      release: 0.16,
+      delaySend: 0.42,
+      reverbSend: 0.24,
+      pan: 0.12,
+      drive: 2,
+      drift: 3,
+    });
   }
   function eStab(t, notes, v, bright) {
-    const sources = [],
-      lp = audio.context.createBiquadFilter(),
-      g = audio.context.createGain(),
-      p = audio.context.createStereoPanner();
-    lp.type = 'lowpass';
-    lp.Q.value = 3;
-    lp.frequency.setValueAtTime(bright ? 2600 : 1600, t);
-    lp.frequency.exponentialRampToValueAtTime(520, t + 0.26);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(v, t + 0.008);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
-    notes.forEach((n, i) => {
-      for (const det of [-8, 8]) {
-        const o = audio.context.createOscillator();
-        o.type = 'sawtooth';
-        o.frequency.value = audioMath.midi(n);
-        o.detune.value = det;
-        o.connect(lp);
-        o.start(t);
-        o.stop(t + 0.4);
-        sources.push(o);
-      }
+    superSaw(t, notes, 0.3, v * 2.6, {
+      voices: 5,
+      detune: 0.9,
+      width: 0.7,
+      hp: 220,
+      cut: [bright ? 5400 : 3600, 600],
+      fall: 0.26,
+      q: 3.4,
+      attack: 0.004,
+      sustain: 0.22,
+      release: 0.14,
+      delaySend: 0.55,
+      reverbSend: 0.14,
+      pan: (audioMath.hashRand(Math.floor(t * 100)) - 0.5) * 0.5,
+      drive: 2.4,
+      drift: 3,
     });
-    p.pan.value = (audioMath.hashRand(Math.floor(t * 100)) - 0.5) * 0.5;
-    lp.connect(g);
-    g.connect(p);
-    p.connect(audio.graph.song.mel);
-    audioGraph.feed(p, 0.55, 0.12);
-    audio.stemFlash.synth = 0.16;
-    audioGraph.releaseVoice(sources[0], g, sources.slice(1).concat(p));
   }
   return { eBass, eAcid, ePad, ePluck, eLead, eStab };
 }

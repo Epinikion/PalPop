@@ -2,6 +2,9 @@ import { TRACKS } from './catalog.js';
 
 /** Level at which voices enter the music bus; the master stage supplies the remaining makeup. */
 const MUSIC_INPUT_GAIN = 0.55;
+/** The exciter's drive into its clipper and how much of it is blended back (about -11 dB). */
+const EXCITE_DRIVE = 6;
+const EXCITE_MIX = 0.17;
 /** Side-channel boost for the synth bus. Only content above ~220 Hz widens; bass stays centred. */
 const SYNTH_WIDTH = 2;
 
@@ -164,11 +167,36 @@ export function createAudioGraph({ audio }) {
     gLP.Q.value = 0.5;
     const gG = audio.context.createGain();
     gG.gain.value = 1;
+    /* a parallel exciter: the top of the mix is pushed through a hard soft-clipper and blended back,
+       so every voice gains the dense upper harmonics that a record's saturation gives it */
+    const exciteHP = audio.context.createBiquadFilter(),
+      excite = audio.context.createWaveShaper(),
+      exciteLP = audio.context.createBiquadFilter(),
+      exciteGain = audio.context.createGain(),
+      exciteCurve = new Float32Array(2048);
+    for (let i = 0; i < exciteCurve.length; i++) {
+      const x = (i * 2) / (exciteCurve.length - 1) - 1;
+      exciteCurve[i] = Math.tanh(x * EXCITE_DRIVE) / Math.tanh(EXCITE_DRIVE);
+    }
+    exciteHP.type = 'highpass';
+    exciteHP.frequency.value = 1500;
+    exciteHP.Q.value = 0.7;
+    excite.curve = exciteCurve;
+    excite.oversample = '2x';
+    exciteLP.type = 'lowpass';
+    exciteLP.frequency.value = 5800;
+    exciteLP.Q.value = 0.5;
+    exciteGain.gain.value = EXCITE_MIX;
     audio.musIn.connect(hp);
     hp.connect(audio.bassShelf);
     audio.bassShelf.connect(presence);
     presence.connect(air);
     air.connect(sat);
+    air.connect(exciteHP);
+    exciteHP.connect(excite);
+    excite.connect(exciteLP);
+    exciteLP.connect(exciteGain);
+    exciteGain.connect(sat);
     sat.connect(glue);
     glue.connect(gLP);
     gLP.connect(gG);

@@ -5,6 +5,18 @@ const LAYOUTS = {
   7: [-23, -14, -6, 0, 6, 14, 23],
 };
 
+const driveCurves = new Map();
+/** A tanh saturation curve, normalised so full scale stays full scale; one per drive amount. */
+function driveCurve(drive) {
+  if (!driveCurves.has(drive)) {
+    const curve = new Float32Array(1025);
+    for (let i = 0; i < curve.length; i++)
+      curve[i] = Math.tanh(((i * 2) / (curve.length - 1) - 1) * drive) / Math.tanh(drive);
+    driveCurves.set(drive, curve);
+  }
+  return driveCurves.get(drive);
+}
+
 /**
  * Detuned-saw stack behind the festival hook, the electro stabs and the plucks. Flat-tuned voices
  * go left, sharp ones right and the centre voice stays put, so the stack is wide but still folds
@@ -16,7 +28,9 @@ export function createSupersaw({ audio, audioGraph, audioMath }) {
    * @param {number} d seconds the note is held before its release
    * @param {number} v overall level
    * @param {object} [o] voices (3/5/7), detune scale, width, hp, cut [start, end], fall, q,
-   *   attack, sustain, release, delaySend, reverbSend, pan, pulse (square centre voice)
+   *   attack, sustain, release, delaySend, reverbSend, pan, pulse (square centre voice),
+   *   drive (saturation after the filter, 0 for none) and drift (random cents each voice is
+   *   off by, so no two notes are the same stack)
    */
   function superSaw(t, notes, d, v, o = {}) {
     const {
@@ -34,6 +48,8 @@ export function createSupersaw({ audio, audioGraph, audioMath }) {
       reverbSend = 0.07,
       pan = 0,
       pulse = false,
+      drive = 0,
+      drift = 0,
     } = o;
     const offsets = LAYOUTS[voices] || LAYOUTS[7],
       end = t + d + release + 0.04,
@@ -69,12 +85,15 @@ export function createSupersaw({ audio, audioGraph, audioMath }) {
     );
     gain.gain.exponentialRampToValueAtTime(0.0001, t + d + release);
     position.pan.value = pan;
+    let voice = 0;
     for (const note of notes)
       for (const cents of offsets) {
         const oscillator = audio.context.createOscillator();
         oscillator.type = pulse && cents === 0 ? 'square' : 'sawtooth';
         oscillator.frequency.value = audioMath.midi(note);
-        oscillator.detune.value = cents * detune;
+        oscillator.detune.value =
+          cents * detune +
+          (drift ? (audioMath.hashRand(Math.round(t * 1000) + voice++, 91) - 0.5) * 2 * drift : 0);
         oscillator.connect(cents < 0 ? left : cents > 0 ? right : centre);
         oscillator.start(t);
         oscillator.stop(end);
@@ -86,7 +105,16 @@ export function createSupersaw({ audio, audioGraph, audioMath }) {
     rightPan.connect(highpass);
     centre.connect(highpass);
     highpass.connect(filter);
-    filter.connect(gain);
+    if (drive) {
+      // Saturation after the filter turns the swept saws into the dense, buzzing sound of an analog synth.
+      const shaper = audio.context.createWaveShaper();
+      shaper.curve = driveCurve(drive);
+      // No oversampling: the filter just before it has already removed what would fold back.
+      shaper.oversample = 'none';
+      filter.connect(shaper);
+      shaper.connect(gain);
+      extra.push(shaper);
+    } else filter.connect(gain);
     gain.connect(position);
     position.connect(audio.graph.song.mel);
     audioGraph.feed(position, delaySend, reverbSend);

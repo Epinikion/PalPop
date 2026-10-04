@@ -1,5 +1,5 @@
 /** Makeup gain that brings the music bus into the range where the dynamics stages do useful work. */
-export const MASTER_GAIN = 0.72;
+export const MASTER_GAIN = 1.05;
 
 /** Dry gameplay feedback bypasses the music bus; this scales it against the music's makeup gain. */
 export const SFX_GAIN = 1.7;
@@ -22,12 +22,12 @@ export function createAudioOutput(context) {
   const curve = new Float32Array(4096);
   for (let i = 0; i < curve.length; i++) {
     const x = (i * 2) / (curve.length - 1) - 1;
-    curve[i] = Math.tanh(x * 1.35) / Math.tanh(1.35);
+    curve[i] = Math.tanh(x * 1.7) / Math.tanh(1.7);
   }
   clipper.curve = curve;
   clipper.oversample = '2x';
-  output.gain.value = 0.82;
-  limiter.threshold.value = -2;
+  output.gain.value = 0.9;
+  limiter.threshold.value = -1.5;
   limiter.knee.value = 0;
   limiter.ratio.value = 20;
   limiter.attack.value = 0.001;
@@ -36,6 +36,18 @@ export function createAudioOutput(context) {
   compressor.connect(clipper);
   clipper.connect(output);
   output.connect(limiter);
-  limiter.connect(context.destination);
+  // Nothing may leave above full scale: past 0.9 the signal is rounded off towards 0.98 instead of
+  // clipping hard, which would crackle on a phone.
+  const safety = context.createWaveShaper(),
+    safe = new Float32Array(4097);
+  for (let i = 0; i < safe.length; i++) {
+    const x = (i * 2) / (safe.length - 1) - 1,
+      over = Math.abs(x) - 0.9;
+    safe[i] = over > 0 ? Math.sign(x) * (0.9 + 0.08 * Math.tanh(over / 0.08)) : x;
+  }
+  safety.curve = safe;
+  safety.oversample = '2x';
+  limiter.connect(safety);
+  safety.connect(context.destination);
   return master;
 }

@@ -11,7 +11,7 @@ const TRACKS = {
     label: 'INDIE DANCE / ELECTRIC PIANO + OFFBEAT BASS',
     name: 'OPEN ROAD',
     style: 'indie',
-    trim: 1.2,
+    trim: 0.95,
     pump: 0.8,
     vocals: true,
     bpm: 123,
@@ -23,7 +23,7 @@ const TRACKS = {
     label: 'TRANCE / ROLLING BASS + SUPERSAW WALL',
     name: 'HORIZON LINE',
     style: 'trance',
-    trim: 0.92,
+    trim: 0.72,
     pump: 0.2,
     bpm: 140,
     description:
