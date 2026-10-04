@@ -13,7 +13,7 @@ const G = PHYSICS.gravity;
 const VMAX = PHYSICS.maxFallSpeed;
 const MAXT = 10;
 const PRISM = 11;
-const CH_MAX = 10;
+const CH_MAX = 14;
 const FEVER_T = 8;
 const BOOMER = 12;
 const GOLDIE = 13;
@@ -48,10 +48,12 @@ const SPECIALS = [
     t: ICY,
     req: 7,
     hint: 'FREEZES TIME',
-    desc: 'FREEZES TIME FOR 7 SECONDS. THE STACK CAN NOT LOSE.',
+    desc: 'SLOWS TIME FOR 7 SECONDS AND CLEARS ANY WARNING. THE STACK CAN NOT LOSE.',
   },
 ];
-const SCORE = [0, 1, 3, 6, 10, 15, 21, 28, 36, 45, 55];
+/** Which themed world shows once a tier has been reached (index into the worlds): dusk to sunrise. */
+const WORLD_OF_TIER = [6, 6, 4, 4, 1, 5, 0, 3, 3, 2, 2];
+const SCORE = [0, 1, 2, 4, 7, 12, 20, 32, 50, 80, 120];
 const BAY = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 const TIERS = [
   {
@@ -189,6 +191,7 @@ export {
   ICY,
   SPECIALS,
   SCORE,
+  WORLD_OF_TIER,
   BAY,
   TIERS,
   RANKS,

@@ -16,11 +16,22 @@ import {
   SPECIALS,
   TIERS,
   W,
+  WORLD_OF_TIER,
   need,
   rank,
 } from '../config.js';
 import { store } from '../core/storage.js';
-import { clamp, fmt } from '../core/math.js';
+import { clamp, fmt, mulberry32 } from '../core/math.js';
+import {
+  advanceQuests,
+  dailyNumber,
+  dailySeed,
+  dailyState,
+  dayKey,
+  recordDaily,
+  recordRun,
+  streak,
+} from './records.js';
 import { TRACKS } from '../audio/catalog.js';
 export function createGameActions({
   audio,
@@ -40,6 +51,14 @@ export function createGameActions({
     game.score += p;
     gameEffects.bumpEl(uiElements.scoreEl);
     if (game.score > game.best) game.best = game.score;
+    // Passing your best is a moment of its own, not a label quietly changing.
+    if (!game.bestAnnounced && game.bestStart >= 300 && game.score > game.bestStart) {
+      game.bestAnnounced = true;
+      audioReactions.reactToEvent('goal');
+      gameEffects.popup(W / 2, 70, 'NEW BEST!', 'rainbow', 1, 1.6);
+      gameEffects.ring(W / 2, 74, 40, '#ffe45c');
+      gameEffects.shake(2);
+    }
     gameProgression.misEvent('score', game.score);
   }
   function updShake() {
@@ -61,7 +80,7 @@ export function createGameActions({
       cb,
     };
   }
-  function newGame() {
+  function newGame(daily = false) {
     audioRuntime.initAudio();
     audioReactions.resetLiveMusic();
     game.bodies = [];
@@ -88,12 +107,20 @@ export function createGameActions({
     game.drops = 0;
     game.highestTier = 0;
     game.pace = 1;
+    game.lastNb = null;
+    game.swaps = GAMEPLAY.swapsAtStart;
+    game.runTime = 0;
+    game.lastSpecialDrop = 0;
+    game.runStats = { fevers: 0, specials: 0, suns: 0, combo: 0 };
+    game.theme = 6;
+    game.themeFrom = -1;
+    game.themeK = 1;
+    store.set('worlds', store.get('worlds', 0) | (1 << 6));
+    game.daily = daily ? dayKey() : null;
+    game.rand = daily ? mulberry32(dailySeed(game.daily)) : Math.random;
     game.freeze = 0;
     game.flashOpacity = 0;
     game.quakeTime = 0;
-    game.dropXs = [];
-    game.repeatDropMultiplier = 1;
-    game.spamWarn = 0;
     game.goldTime = 0;
     game.iceTime = 0;
     game.bolts = [];
@@ -106,12 +133,15 @@ export function createGameActions({
     game.heartbeatTime = 0;
     game.bestBase = store.get('best', 0);
     game.best = game.bestBase;
+    game.bestStart = game.bestBase;
+    game.bestAnnounced = false;
     game.didDrop = game.didMerge = game.didSwap = false;
     game.danger = false;
     game.loseY = LOSE_Y;
     uiElements.scoreEl.textContent = '0';
     uiElements.bestEl.textContent = fmt(game.bestBase);
     updShake();
+    uiInterface.updSwaps();
     game.phase = 'play';
     audioReactions.reactToEvent('start');
     game.held = gamePals.mkHeld(gamePals.pick());
@@ -136,18 +166,6 @@ export function createGameActions({
     const radius = TIERS[game.held.t].r;
     game.held.x = clamp(game.aimX, FL + radius + 1, FR - radius - 1);
     game.carrierX = game.held.x;
-    {
-      const x = game.held.x;
-      let near = 0;
-      for (const v of game.dropXs) if (Math.abs(v - x) <= 9) near++;
-      game.dropXs.push(x);
-      if (game.dropXs.length > 6) game.dropXs.shift();
-      game.repeatDropMultiplier = near >= 5 ? 0.4 : near >= 4 ? 0.55 : near >= 3 ? 0.75 : 1;
-      if (game.repeatDropMultiplier < 1 && game.elapsed - game.spamWarn > 7) {
-        game.spamWarn = game.elapsed;
-        gameEffects.popup(W / 2, 74, 'MIX IT UP!', '#ff9a3c', 1, 1.4);
-      }
-    }
     const b = gamePals.mk(game.held.t, game.held.x, SPAWN_Y);
     audioReactions.reactToEvent('drop', { tier: game.held.t, x: game.held.x });
     b.vy = GAMEPLAY.dropVelocity;
@@ -166,7 +184,10 @@ export function createGameActions({
     $('#nextBtn').classList.remove('used');
   }
   function swap() {
-    if (game.phase !== 'play' || !game.held || !game.canSwap || game.paused) return;
+    if (game.phase !== 'play' || !game.held || !game.canSwap || game.swaps <= 0 || game.paused)
+      return;
+    game.swaps--;
+    uiInterface.updSwaps();
     const t = game.held.t;
     game.held.t = game.nextTier;
     game.nextTier = t;
@@ -182,6 +203,9 @@ export function createGameActions({
     if (game.phase !== 'play' || game.charge < CH_MAX || game.paused) return;
     audioReactions.reactToEvent('shake');
     game.charge = 0;
+    game.comboTime = 0;
+    game.comboCount = 0;
+    if (game.feverT <= 0) game.feverCharge *= 0.5;
     updShake();
     for (const b of game.bodies) {
       const room = Math.max(0, b.y - b.r - FT - 2),
@@ -201,6 +225,17 @@ export function createGameActions({
     game.flashOpacity = 0.4;
     game.freeze = 0.05;
     vib([40, 30, 80]);
+  }
+  /** Each stretch of the evolution chain has its own sky: the world changes as the pals climb. */
+  function ascend() {
+    const world = WORLD_OF_TIER[Math.min(MAXT, game.highestTier)];
+    if (world === game.theme) return;
+    game.themeFrom = game.theme;
+    game.theme = world;
+    game.themeK = 0;
+    const seen = store.get('worlds', 0) | (1 << world);
+    store.set('worlds', seen);
+    gameEffects.popup(W / 2, 40, 'NEW WORLD!', '#9fe2ff', 1, 1.4);
   }
   function discover(t) {
     audioReactions.reactToEvent('discover', { tier: t });
@@ -229,6 +264,7 @@ export function createGameActions({
   function startFever() {
     audioReactions.reactToEvent('fever');
     game.feverT = FEVER_T;
+    game.runStats.fevers++;
     audio.feverOn = true;
     game.feverCharge = 1;
     game.flashOpacity = 0.6;
@@ -271,36 +307,28 @@ export function createGameActions({
       y = (a.y + b.y) / 2,
       wild = a.t === PRISM || b.t === PRISM,
       mult = gameSpecials.curMult();
-    game.comboCount = game.comboTime > 0 ? game.comboCount + 1 : 1;
-    game.comboTime =
-      GAMEPLAY.comboWindow +
-      Math.min(GAMEPLAY.maxExtraComboSteps, game.comboCount - 1) * GAMEPLAY.extraComboTime;
+    // A combo is a chain reaction: this merge consumed the pal the previous one made, within the
+    // window. Dropping fast does not make one, so tempo alone can no longer inflate the score.
+    const chained = game.comboTime > 0 && (a === game.lastNb || b === game.lastNb);
+    game.comboCount = chained ? game.comboCount + 1 : 1;
+    game.comboTime = GAMEPLAY.chainWindow;
+    game.runStats.combo = Math.max(game.runStats.combo, game.comboCount);
     gameProgression.misEvent('combo', game.comboCount);
     audioReactions.reactToMerge(t + 1, game.comboCount, x);
-    const cm = Math.min(game.comboCount, 5),
-      sf = game.repeatDropMultiplier;
+    const cm = Math.min(game.comboCount, 5);
     game.charge = Math.min(CH_MAX, game.charge + 1);
-    if (game.charge === CH_MAX && !updShake.rdy) {
-      updShake.rdy = true;
-    }
-    if (game.charge < CH_MAX) updShake.rdy = false;
     updShake();
-    const np = 1 + Math.min(0.35, game.merges * 0.005);
-    if (Math.floor((np - 1) * 10) > Math.floor((game.pace - 1) * 10)) {
-      gameEffects.popup(W / 2, 62, 'FASTER!', '#ff9a3c', 2, 1.2);
-      gameEffects.shake(3);
-    }
-    game.pace = np;
     if (game.feverT <= 0) {
+      // Fever is earned by chains: each link makes the next one charge far more.
       game.feverCharge +=
-        (0.04 + 0.01 * Math.min(t, 8)) *
-        (1 + 0.3 * Math.min(game.comboCount - 1, 4)) *
-        (sf < 1 ? 0.5 : 1);
+        (0.02 + 0.006 * Math.min(t, 8)) * (1 + 0.8 * Math.min(game.comboCount - 1, 4));
       if (game.feverCharge >= 1) startFever();
     }
-    if (a.ot > 0.9 || b.ot > 0.9) {
-      addScore(50 * mult);
-      gameEffects.popup(x, y - 18, 'CLUTCH!', '#7dffc4', 1, 1.2);
+    // Saving a pal that was about to lose you the game pays more the later you leave it.
+    const late = Math.max(a.ot, b.ot);
+    if (late > 0.9) {
+      addScore(Math.round(30 + 40 * Math.min(1, late - 0.9)) * mult);
+      gameEffects.popup(x, Math.max(16, y - 18), 'CLUTCH!', '#7dffc4', 1, 1.2);
       gameEffects.sparkles(x, y, 10, 90);
     }
     if (wild) {
@@ -308,7 +336,7 @@ export function createGameActions({
       gameEffects.ring(x, y, 24, '#ff9ad5');
     }
     if (t >= MAXT) {
-      const pts = Math.round(500 * cm * mult * sf);
+      const pts = Math.round(600 * cm * mult);
       addScore(pts);
       gameEffects.burst(x, y, ['#fff', '#ffe45c', '#ffc400', '#ff9500'], 50, 150, 60);
       gameEffects.sparkles(x, y, 24, 130);
@@ -325,7 +353,19 @@ export function createGameActions({
       gameEffects.popup(x, Math.max(16, y - 14), 'SUN BURST!', '#ffe45c', 1, 1.6);
       gameEffects.popup(x, Math.max(24, y), '+' + pts, '#fff', 1, 1.6);
       for (const o of game.bodies) o.flash = 1;
-      gameEffects.shake(9);
+      // The Sun is the win: it also clears the small pals, starts a fever and is counted for good.
+      let swept = 0;
+      for (const o of game.bodies) {
+        if (o.dead || o.mg || o.t > 5) continue;
+        o.dead = true;
+        swept += SCORE[o.t];
+        const rp = TIERS[o.t].ramp;
+        gameEffects.burst(o.x, o.y, [rp[2], rp[3], '#fff'], 6, 80, 80);
+      }
+      if (swept) addScore(swept * mult);
+      game.runStats.suns++;
+      if (game.feverT <= 0) startFever();
+      gameEffects.shake(5);
       game.freeze = 0.1;
       game.flashOpacity = 0.8;
       vib([40, 40, 80]);
@@ -337,6 +377,8 @@ export function createGameActions({
     nb.s = 0.55;
     nb.flash = 1;
     nb.age = 0.7;
+    nb.ot = -GAMEPLAY.mergeGrace;
+    game.lastNb = nb;
     game.bodies.push(nb);
     /* A small local nudge helps the new, larger pal settle into its next match. */
     for (const o of game.bodies) {
@@ -361,7 +403,7 @@ export function createGameActions({
         }
       }
     } /* neighbors cheer */
-    const pts = Math.max(1, Math.round(SCORE[t + 1] * cm * mult * sf));
+    const pts = Math.max(1, Math.round(SCORE[t + 1] * cm * mult));
     addScore(pts);
     const rp = TIERS[t + 1].ramp;
     gameEffects.burst(x, y, [rp[2], rp[3], rp[4], '#fff'], 10 + t * 3, 60 + t * 12);
@@ -396,6 +438,7 @@ export function createGameActions({
     if (t + 1 > game.highestTier) {
       game.highestTier = t + 1;
       uiInterface.drawLadder(true);
+      ascend();
     }
     if (!game.dex[t + 1]) discover(t + 1);
   }
@@ -419,21 +462,38 @@ export function createGameActions({
     gameEffects.shake(7);
     vib([60, 40, 60]);
   }
+  /** Keeps a new best if the tab is closed mid-run; the run itself is only booked when it ends. */
+  function checkpoint() {
+    if (game.phase === 'play' && game.score > store.get('best', 0)) store.set('best', game.score);
+  }
   function finishOver() {
     game.phase = 'over';
-    const prev = store.get('best', 0);
-    if (game.score > prev) {
-      store.set('best', game.score);
-      game.newBest = true;
-    }
-    game.bestBase = Math.max(prev, game.score);
+    const run = {
+        score: game.score,
+        tier: game.highestTier,
+        secs: game.runTime,
+        merges: game.merges,
+        combo: game.runStats.combo,
+        suns: game.runStats.suns,
+        fevers: game.runStats.fevers,
+        specials: game.runStats.specials,
+      },
+      L0 = store.get('lvl', 1),
+      X0 = store.get('xp', 0),
+      // The best before this run began, so a checkpoint mid-run cannot hide a new best.
+      recap = recordRun(store, { ...run, previousBest: game.bestStart }),
+      daily = game.daily ? recordDaily(store, game.daily, run) : null,
+      quests = advanceQuests(store, Math.random, run, L0),
+      best = Math.max(store.get('best', 0), game.score);
+    store.set('best', best);
+    game.newBest = recap.newBest;
+    game.bestBase = best;
     game.displayScore = game.score;
     game.lastScoreText = String(game.score);
     uiElements.scoreEl.textContent = fmt(game.score);
-    uiElements.bestEl.textContent = fmt(game.bestBase);
-    const gain = Math.floor(game.score / 25) + game.missionsDone * 30 + game.discoveries * 40;
-    const L0 = store.get('lvl', 1),
-      X0 = store.get('xp', 0);
+    uiElements.bestEl.textContent = fmt(best);
+    const gain =
+      Math.floor(game.score / 40) + game.missionsDone * 25 + game.discoveries * 40 + quests.xp;
     let L = L0,
       X = X0 + gain;
     while (X >= need(L)) {
@@ -445,10 +505,16 @@ export function createGameActions({
     store.set('xp', X);
     const gs = $('#goScore');
     gs.textContent = '0';
-    $('#goBest').textContent =
-      'BEST ' + fmt(game.bestBase) + (game.missionsDone ? '   GOALS ' + game.missionsDone : '');
+    uiInterface.renderOver({
+      score: game.score,
+      best,
+      recap,
+      quests: quests.rows,
+      daily,
+      dailyNo: game.daily ? dailyNumber(game.daily) : 0,
+      streak: game.daily ? streak(store, game.daily) : 0,
+    });
     $('#goName').textContent = TIERS[game.highestTier].n.toUpperCase();
-    $('#goNew').hidden = !game.newBest;
     $('#goUp').hidden = true;
     $('#goLvl').textContent = 'LV ' + L0 + ' ' + rank(L0);
     $('#goXpTxt').textContent = '+' + gain + ' XP';
@@ -512,18 +578,31 @@ export function createGameActions({
     $('#tLvl').textContent =
       'LV ' + L + ' ' + rank(L) + ' - PALS ' + uiInterface.palCount() + '/16';
     $('#tNp').textContent = (audio.enabled ? 'RADIO / ' : 'PAUSED / ') + TRACKS[audio.trackId].name;
+    uiInterface.renderTitle();
   }
+  const PAL_MARK = ['🔵', '🐤', '🐰', '🐸', '🐱', '🐼', '👻', '🦉', '⚡', '🐲', '☀️'];
   async function share() {
     const url = location.href.split('#')[0],
-      L = store.get('lvl', 1);
-    const text =
-      'I evolved to ' +
-      TIERS[game.highestTier].n +
-      ' in Pal Pop and scored ' +
-      game.score +
-      ' (level ' +
-      L +
-      '). Can you reach the Sun?';
+      L = store.get('lvl', 1),
+      tier = TIERS[game.highestTier].n,
+      mark = PAL_MARK.slice(0, game.highestTier + 1).join('');
+    const text = game.daily
+      ? 'Pal Pop DAILY #' +
+        dailyNumber(game.daily) +
+        '  ' +
+        fmt(game.score) +
+        '\n' +
+        mark +
+        '\nSame pals for everyone today. Beat it!'
+      : 'I evolved to ' +
+        tier +
+        ' in Pal Pop and scored ' +
+        fmt(game.score) +
+        ' (level ' +
+        L +
+        ').\n' +
+        mark +
+        '\nCan you reach the Sun?';
     try {
       if (navigator.share) {
         await navigator.share({
@@ -547,6 +626,8 @@ export function createGameActions({
   /* ================= physics ================= */
   return {
     setTitleInfo,
+    checkpoint,
+    ascend,
     discover,
     addScore,
     doMerge,

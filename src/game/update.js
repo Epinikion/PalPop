@@ -1,5 +1,6 @@
 import { RM } from '../core/dom.js';
-import { FEVER_T, FL, FR, FT, H, LOSE_Y, PRISM, TIERS, W } from '../config.js';
+import { FEVER_T, FL, FR, FT, H, LOSE_Y, TIERS, W } from '../config.js';
+import { GAMEPLAY } from '../settings.js';
 import { clamp } from '../core/math.js';
 export function createGameUpdate({
   audio,
@@ -136,11 +137,25 @@ export function createGameUpdate({
           gameEffects.popup(W / 2, 90, 'THAW', '#9fe2ff', 1, 0.9);
         }
       }
+      // The room shrinks as the run goes on: after a while the lose line creeps down the board.
+      game.runTime += dt;
+      const squeeze = Math.min(
+        GAMEPLAY.squeezeMax,
+        Math.max(0, Math.floor((game.runTime - GAMEPLAY.squeezeStart) / GAMEPLAY.squeezeEvery) + 1),
+      );
+      if (LOSE_Y + squeeze > game.loseY) {
+        game.loseY = LOSE_Y + squeeze;
+        if (squeeze % 4 === 0) gameEffects.popup(W / 2, 40, 'SQUEEZE!', '#ff9a3c', 1, 1.2);
+      }
       game.danger = false;
       for (const b of game.bodies) {
-        if (b.age > 1.1 && b.y - b.r < game.loseY) {
-          b.ot += game.iceTime > 0 ? 0 : dt;
-          game.danger = true;
+        // The top edge counts a little inside the pal: a nose touching the line is not a loss.
+        if (b.age > 1.1 && b.y - b.r * 0.7 < game.loseY) {
+          if (game.iceTime > 0) b.ot = Math.max(0, b.ot - dt * 2);
+          else {
+            b.ot += dt;
+            game.danger = true;
+          }
           if (b.ot > 2.0) {
             gameActions.gameOver();
             break;

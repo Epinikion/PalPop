@@ -1,5 +1,4 @@
 import { FL, FLOOR, FR, FT, H, PRISM, RAIL_Y, SPECIALS, TIERS, VMAX, W } from '../config.js';
-import { VISUAL_THEME } from '../audio/catalog.js';
 import { RM } from '../core/dom.js';
 import { clamp } from '../core/math.js';
 export function createRenderBoard({
@@ -216,7 +215,7 @@ export function createRenderBoard({
     if (!audio.frequencyData || !audio.enabled || !audio.context) return;
     const n = 18,
       bw = (FR - FL) / n;
-    g.fillStyle = renderWorlds.THEMES[VISUAL_THEME].eq;
+    g.fillStyle = renderWorlds.THEMES[game.theme].eq;
     for (let i = 0; i < n; i++) {
       const b = 1 + Math.floor(Math.pow(i / n, 1.5) * 46),
         v = audio.frequencyData[b] / 255,
@@ -241,7 +240,7 @@ export function createRenderBoard({
       );
     g.fillStyle = '#0e0628';
     g.fillRect(-8, -8, W + 16, H + 16);
-    const ti = VISUAL_THEME,
+    const ti = game.theme,
       tw = renderWorlds.WORLD[ti];
     if (game.themeK < 1 && game.themeFrom >= 0) {
       g.drawImage(renderWorlds.WORLD[game.themeFrom].sky, 0, 0);
@@ -312,10 +311,13 @@ export function createRenderBoard({
     // it readable on any background. In danger it turns solid and every culprit gets a ring that
     // fills as its two seconds run out.
     const flashRed = ((game.elapsed * 8) | 0) % 2;
-    g.fillStyle = 'rgba(27,18,48,.75)';
-    for (let x = FL + 1; x < FR - 1; x += game.danger ? 1 : 6) g.fillRect(x, game.loseY + 1, 3, 1);
-    g.fillStyle = game.danger ? (flashRed ? '#ff4d6d' : '#ffd0da') : 'rgba(255,140,165,.8)';
-    for (let x = FL + 1; x < FR - 1; x += game.danger ? 1 : 6) g.fillRect(x, game.loseY, 3, 1);
+    if (game.phase !== 'title') {
+      g.fillStyle = 'rgba(27,18,48,.75)';
+      for (let x = FL + 1; x < FR - 1; x += game.danger ? 1 : 6)
+        g.fillRect(x, game.loseY + 1, 3, 1);
+      g.fillStyle = game.danger ? (flashRed ? '#ff4d6d' : '#ffd0da') : 'rgba(255,140,165,.8)';
+      for (let x = FL + 1; x < FR - 1; x += game.danger ? 1 : 6) g.fillRect(x, game.loseY, 3, 1);
+    }
     for (const b of game.bodies)
       if (b.ot > 0.05)
         drawArc(g, b.x, b.y, b.r + 2, Math.min(1, b.ot / 2), flashRed ? '#ff4d6d' : '#ffffff');

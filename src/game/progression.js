@@ -1,62 +1,36 @@
 import { $, vib } from '../core/dom.js';
 import { FL, FR, FT, TIERS, W } from '../config.js';
-import { fmtK } from '../core/math.js';
+import { GAMEPLAY } from '../settings.js';
 export function createGameProgression({
   audioReactions,
   game,
   gameEffects,
   renderSprites,
-  uiElements,
   uiInterface,
 }) {
   /* ================= missions & progression ================= */
+  /**
+   * The goal strip. Goals teach the game, then keep steering it: make a pal, chain merges, start
+   * a fever. They pay a swap (and XP at the end of the run), not score, so a lucky goal cannot
+   * decide a run. `game.rand` keeps a daily run's goals the same for everyone.
+   */
   function genMission(k) {
+    const rand = game.rand;
     let m;
-    if (k === 0)
-      m = {
-        type: 'make',
-        t: 2,
-        n: 3,
-      };
-    else if (k === 1)
-      m = {
-        type: 'combo',
-        n: 3,
-      };
-    else if (k === 2)
-      m = {
-        type: 'make',
-        t: 4,
-        n: 2,
-      };
+    if (k === 0) m = { type: 'make', t: 2, n: 3 };
+    else if (k === 1) m = { type: 'combo', n: 2 };
+    else if (k === 2) m = { type: 'make', t: 4, n: 2 };
     else {
-      const r = Math.random();
-      if (r < 0.45) {
-        const t = Math.min(8, 3 + Math.floor(Math.random() * Math.min(6, k - 1)));
-        m = {
-          type: 'make',
-          t,
-          n: t >= 7 ? 1 : t >= 5 ? 2 : 3,
-        };
-      } else if (r < 0.65)
-        m = {
-          type: 'combo',
-          n: Math.min(7, 3 + Math.floor(k / 2)),
-        };
-      else if (r < 0.85)
-        m = {
-          type: 'score',
-          n: Math.ceil((game.score + 400 + k * 350) / 100) * 100,
-        };
-      else
-        m = {
-          type: 'fever',
-          n: 1,
-        };
+      const r = rand();
+      if (r < 0.6) {
+        const t = Math.min(8, 3 + Math.floor(rand() * Math.min(6, k - 1)));
+        m = { type: 'make', t, n: t >= 7 ? 1 : t >= 5 ? 2 : 3 };
+      } else if (r < 0.9) m = { type: 'combo', n: Math.min(5, 2 + Math.floor(k / 3)) };
+      else m = { type: 'fever', n: 1 };
     }
-    m.p = m.type === 'score' ? game.score : 0;
+    m.p = 0;
     m.k = k;
-    m.reward = Math.min(400, 50 + k * 40);
+    m.reward = 25;
     return m;
   }
   function setGoal() {
@@ -72,21 +46,13 @@ export function createGameProgression({
         ? 'MAKE ' + m.n + ' ' + TIERS[m.t].n.toUpperCase()
         : m.type === 'combo'
           ? 'HIT COMBO X' + m.n
-          : m.type === 'score'
-            ? 'REACH ' + fmtK(m.n) + ' POINTS'
-            : 'START A FEVER';
+          : 'START A FEVER';
     updGoal();
   }
   function updGoal() {
     const m = game.mission;
     if (!m) return;
-    $('#goalNum').textContent = m.done
-      ? 'DONE'
-      : m.type === 'score'
-        ? fmtK(m.p)
-        : m.type === 'combo'
-          ? 'X' + m.p
-          : m.p + '/' + m.n;
+    $('#goalNum').textContent = m.done ? 'DONE' : m.type === 'combo' ? 'X' + m.p : m.p + '/' + m.n;
     $('#goalBar').style.width = Math.min(1, m.p / m.n) * 100 + '%';
   }
   function misEvent(type, val, t) {
@@ -96,7 +62,6 @@ export function createGameProgression({
       if (t !== m.t) return;
       m.p++;
     } else if (type === 'combo') m.p = Math.max(m.p, val);
-    else if (type === 'score') m.p = Math.min(m.n, val);
     else m.p = 1;
     if (m.p >= m.n) completeMission();
     else updGoal();
@@ -108,11 +73,11 @@ export function createGameProgression({
     m.p = m.n;
     game.missionsDone++;
     updGoal();
-    game.score += m.reward;
-    gameEffects.bumpEl(uiElements.scoreEl);
-    gameEffects.popup(W / 2, 70, 'GOAL!', '#7dffc4', 2, 1.2);
-    gameEffects.popup(W / 2, 84, '+' + m.reward, '#fff', 1, 1.2);
-    for (let i = 0; i < 40; i++) gameEffects.confetti(FL + Math.random() * (FR - FL), FT + 2);
+    game.swaps = Math.min(GAMEPLAY.swapsMax, game.swaps + 1);
+    uiInterface.updSwaps();
+    gameEffects.popup(W / 2, 70, 'GOAL!', '#7dffc4', 1, 1.2);
+    gameEffects.popup(W / 2, 82, '+1 SWAP', '#fff', 1, 1.2);
+    for (let i = 0; i < 14; i++) gameEffects.confetti(FL + Math.random() * (FR - FL), FT + 2);
     const el = $('#goal');
     el.classList.remove('done');
     void el.offsetWidth;

@@ -1,7 +1,9 @@
 import { $ } from '../core/dom.js';
 import { H, MAXT, PRISM, SPECIALS, TIERS, W } from '../config.js';
-import { TRACK_IDS, TRACKS, VISUAL_THEME } from '../audio/catalog.js';
+import { TRACK_IDS, TRACKS } from '../audio/catalog.js';
+import { dailyNumber, dailyState, dayKey, streak } from '../game/records.js';
 import { store } from '../core/storage.js';
+import { fmt, fmtK } from '../core/math.js';
 export function createUiInterface({
   audio,
   audioReactions,
@@ -42,6 +44,12 @@ export function createUiInterface({
       );
     }
   }
+  /** The NEXT button doubles as the swap counter: swaps are limited and earned by goals. */
+  function updSwaps() {
+    const label = $('#nextBtn .lbl');
+    if (label) label.textContent = 'NEXT x' + game.swaps;
+    $('#nextBtn').classList.toggle('empty', game.swaps <= 0);
+  }
   function drawNext() {
     blitFit($('#nextCv'), renderSprites.SPR[game.nextTier], Math.round(44 * dpr));
   }
@@ -73,6 +81,77 @@ export function createUiInterface({
         ch.d.classList.add('fresh');
       }
     });
+  }
+  /* ---- game-over summary: records, daily result and quests ---- */
+  const line = (parent, className, text) => {
+    const row = document.createElement('div');
+    row.className = className;
+    row.textContent = text;
+    parent.append(row);
+    return row;
+  };
+  const QUEST_TEXT = {
+    reach: (n) => 'REACH ' + TIERS[n].n.toUpperCase(),
+    chain: (n) => 'CHAIN X' + n,
+    score: (n) => 'SCORE ' + fmtK(n),
+    merges: (n) => 'MERGE ' + n + ' PALS',
+    fevers: (n) => 'FEVER X' + n,
+    specials: (n) => 'SPECIALS X' + n,
+  };
+  const questCount = (q, n) =>
+    q.type === 'reach' ? n + 1 + '/' + (q.target + 1) : n + '/' + q.target;
+  function renderOver({ score, best, recap, quests, daily, dailyNo, streak }) {
+    $('#goBest').textContent = recap.newBest
+      ? 'BEST ' + fmt(best)
+      : recap.nearMiss
+        ? fmt(recap.gap) + ' SHORT OF BEST'
+        : 'BEST ' + fmt(best);
+    const fresh = $('#goNew');
+    fresh.hidden = !recap.newBest;
+    fresh.textContent = recap.newBest
+      ? 'NEW BEST!' + (recap.previousBest ? ' +' + fmt(score - recap.previousBest) : '')
+      : '';
+    const recapBox = $('#goRecap');
+    recapBox.replaceChildren();
+    for (const record of recap.records.slice(0, 2))
+      line(recapBox, 'rec hot', 'NEW ' + record + '!');
+    if (recap.runs >= 3) line(recapBox, 'rec', 'AVERAGE OF LAST 5  ' + fmt(recap.average));
+    const dailyBox = $('#goDaily');
+    dailyBox.hidden = !dailyNo;
+    if (dailyNo)
+      dailyBox.textContent =
+        'DAILY #' +
+        dailyNo +
+        '  BEST ' +
+        fmt(daily.best) +
+        '  TRY ' +
+        daily.tries +
+        (streak >= 2 ? '  ' + streak + ' DAYS' : '');
+    $('#freeBtn').hidden = !dailyNo;
+    const questBox = $('#goQuests');
+    questBox.replaceChildren();
+    if (quests.length) line(questBox, 'qhead', 'QUESTS');
+    for (const q of quests) {
+      const row = document.createElement('div');
+      row.className = 'quest' + (q.done ? ' done' : '');
+      line(row, 'qtxt', QUEST_TEXT[q.type](q.target));
+      line(row, 'qnum', q.done ? '+' + q.xp + ' XP' : questCount(q, q.after));
+      const bar = document.createElement('i');
+      bar.style.width = Math.min(100, (q.after / q.target) * 100) + '%';
+      row.append(bar);
+      questBox.append(row);
+    }
+  }
+  function renderTitle() {
+    const today = dayKey(),
+      state = dailyState(store, today),
+      days = streak(store, today);
+    $('#dailyBtn').textContent = 'DAILY #' + dailyNumber(today);
+    $('#tDaily').textContent = state.tries
+      ? 'TODAY: BEST ' + fmt(state.best)
+      : days
+        ? days + ' DAY' + (days > 1 ? 'S' : '') + ' IN A ROW'
+        : 'NEW PALS EVERY DAY';
   }
   const radio = $('#radio');
   const songButtons = TRACK_IDS.map((id) => {
@@ -158,7 +237,10 @@ export function createUiInterface({
     };
   });
   function renderBook() {
-    $('#bookTitle').textContent = 'PALBOOK ' + palCount() + '/' + ORDER.length;
+    let worlds = 0;
+    for (let w = 0; w < 7; w++) if (store.get('worlds', 0) & (1 << w)) worlds++;
+    $('#bookTitle').textContent =
+      'PALBOOK ' + palCount() + '/' + ORDER.length + '  WORLDS ' + worlds + '/7';
     for (const ce of cellEls) {
       const u = unlocked(ce.i);
       ce.b.classList.toggle('lock', !u);
@@ -316,6 +398,9 @@ export function createUiInterface({
       dpr = value;
     },
     drawNext,
+    updSwaps,
+    renderOver,
+    renderTitle,
     palCount,
     book,
     closeBook,

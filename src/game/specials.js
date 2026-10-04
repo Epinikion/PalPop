@@ -22,6 +22,7 @@ export function createGameSpecials({
     if (nt > game.highestTier) {
       game.highestTier = nt;
       uiInterface.drawLadder(true);
+      gameActions.ascend();
     }
     if (!game.dex[nt]) gameActions.discover(nt);
   }
@@ -80,7 +81,12 @@ export function createGameSpecials({
       add = [];
     const tg = game.bodies
       .filter(
-        (o) => o !== b && !o.dead && !o.mg && o.t <= 8 && Math.hypot(o.x - b.x, o.y - b.y) < 75,
+        (o) =>
+          o !== b &&
+          !o.dead &&
+          !o.mg &&
+          o.t <= Math.min(8, Math.max(2, game.highestTier - 2)) &&
+          Math.hypot(o.x - b.x, o.y - b.y) < 75,
       )
       .sort((p, q) => Math.hypot(p.x - b.x, p.y - b.y) - Math.hypot(q.x - b.x, q.y - b.y))
       .slice(0, 4);
@@ -100,6 +106,7 @@ export function createGameSpecials({
       nb.s = 0.4;
       nb.flash = 1;
       nb.age = 0.7;
+      nb.ot = -1.5;
       add.push(nb);
       pts += SCORE[o.t + 1] * mult;
       const rp = TIERS[o.t + 1].ramp;
@@ -130,6 +137,7 @@ export function createGameSpecials({
     audioReactions.reactToEvent('freeze', { x: b.x });
     b.dead = true;
     game.iceTime = 7;
+    for (const o of game.bodies) o.ot = 0;
     gameEffects.burst(b.x, b.y, ['#9fe2ff', '#d2f4ff', '#ffffff'], 36, 110, 40);
     gameEffects.sparkles(b.x, b.y, 14, 90);
     gameEffects.ring(b.x, b.y, 34, '#9fe2ff');
@@ -145,6 +153,7 @@ export function createGameSpecials({
     );
     for (const b of list) {
       b.act = true;
+      game.runStats.specials++;
       if (b.t === BOOMER) boom(b);
       else if (b.t === GOLDIE) goldRush(b);
       else if (b.t === ZAPPY) zap(b);

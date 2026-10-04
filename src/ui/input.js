@@ -14,10 +14,12 @@ export function createUiInput({ audioRuntime, game, gameActions, uiElements, uiI
   const trap = () => {
     if (!window.history.state?.palpop) window.history.pushState({ palpop: true }, '');
   };
-  const start = () => {
+  const start = (daily = false) => {
     trap();
-    gameActions.irisTo(gameActions.newGame);
+    gameActions.irisTo(() => gameActions.newGame(daily));
   };
+  // PLAY AGAIN repeats the mode you were in: a daily run replays the same pals.
+  const again = () => start(!!game.daily);
   const pause = () => {
     if (game.phase === 'play' && uiInterface.radio.hidden && uiInterface.book.hidden)
       uiInterface.openRadio();
@@ -63,8 +65,12 @@ export function createUiInput({ audioRuntime, game, gameActions, uiElements, uiI
     if (e.pointerId === pointer) down = false;
   });
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) pause();
+    if (document.hidden) {
+      gameActions.checkpoint();
+      pause();
+    }
   });
+  window.addEventListener('pagehide', gameActions.checkpoint);
   window.addEventListener('popstate', () => {
     if (!uiInterface.book.hidden) uiInterface.closeBook();
     else if (!uiInterface.radio.hidden) uiInterface.closeRadio();
@@ -95,7 +101,8 @@ export function createUiInput({ audioRuntime, game, gameActions, uiElements, uiI
       if (game.phase === 'title') start();
       else gameActions.drop();
       e.preventDefault();
-    } else if (e.key === 'Enter' && (game.phase === 'title' || game.phase === 'over')) start();
+    } else if (e.key === 'Enter' && game.phase === 'title') start();
+    else if (e.key === 'Enter' && game.phase === 'over') again();
     else if (e.key === 's' || e.key === 'S') gameActions.swap();
     else if (e.key === 'm') uiInterface.openRadio();
     else if (e.key === 'b') uiInterface.openBook();
@@ -106,7 +113,12 @@ export function createUiInput({ audioRuntime, game, gameActions, uiElements, uiI
     gameActions.doShake();
   });
   $('#sndBtn').addEventListener('click', uiInterface.openRadio);
-  $('#againBtn').addEventListener('click', start);
+  $('#againBtn').addEventListener('click', again);
+  $('#freeBtn').addEventListener('click', () => start(false));
+  $('#dailyBtn').addEventListener('click', () => {
+    audioRuntime.initAudio();
+    start(true);
+  });
   $('#shareBtn').addEventListener('click', gameActions.share);
 
   /* ================= boot ================= */

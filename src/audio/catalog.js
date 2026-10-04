@@ -4,7 +4,6 @@ const FESTIVAL = 7;
 const VOCAL = 8;
 const WAREHOUSE = 9;
 const TRANCE = 10;
-const VISUAL_THEME = 6;
 const TRACKS = {
   [TRANCE]: {
     buttonId: 'tranceTrack',
@@ -74,4 +73,4 @@ const TRACKS = {
   },
 };
 const TRACK_IDS = Object.keys(TRACKS).map(Number);
-export { DANCE, TECHNO, FESTIVAL, VOCAL, WAREHOUSE, TRANCE, VISUAL_THEME, TRACK_IDS, TRACKS };
+export { DANCE, TECHNO, FESTIVAL, VOCAL, WAREHOUSE, TRANCE, TRACK_IDS, TRACKS };

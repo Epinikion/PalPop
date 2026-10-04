@@ -1902,3 +1902,94 @@ html {
     display: none;
   }
 }
+
+/* ===== Game-over summary: records, the daily result and quests ===== */
+.panel {
+  max-height: calc(100% - var(--u) * 4);
+  overflow-y: auto;
+}
+#goCv {
+  width: calc(var(--u) * 18);
+  height: calc(var(--u) * 18);
+}
+#goRecap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--u) * 0.8);
+}
+.rec {
+  font-size: max(8px, calc(var(--u) * 3));
+  color: var(--muted);
+}
+.rec.hot {
+  color: #b07a00;
+}
+#goDaily {
+  font-size: max(8px, calc(var(--u) * 3));
+  color: var(--accent);
+  text-align: center;
+  line-height: 1.6;
+}
+#goQuests {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 1.2);
+}
+.qhead {
+  font-size: max(8px, calc(var(--u) * 3));
+  color: var(--muted);
+}
+.quest {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  gap: calc(var(--u) * 2);
+  padding: calc(var(--u) * 1.4) calc(var(--u) * 2);
+  font-size: max(8px, calc(var(--u) * 3));
+  border: calc(var(--u) * 0.8) solid var(--edge);
+  background: rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+.quest > div {
+  position: relative;
+  z-index: 1;
+}
+.quest i {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: calc(var(--u) * 1);
+  background: var(--mint);
+}
+.quest.done {
+  color: var(--mint);
+}
+#goUnTxt {
+  line-height: 1.6;
+  text-align: center;
+}
+/* Title screen: the daily challenge sits under the tap prompt. */
+.daily {
+  pointer-events: auto;
+  width: auto;
+  margin-top: calc(var(--u) * 5);
+  padding: calc(var(--u) * 2.4) calc(var(--u) * 6);
+  min-height: 44px;
+  font-size: max(10px, calc(var(--u) * 4));
+}
+#tDaily {
+  margin-top: calc(var(--u) * 2);
+}
+#nextBtn.empty {
+  opacity: 0.55;
+}
+.quest .qtxt {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.quest .qnum {
+  white-space: nowrap;
+}

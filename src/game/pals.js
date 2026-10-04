@@ -1,4 +1,4 @@
-import { PRISM, SPAWN_Y, SPECIALS, TIERS } from '../config.js';
+import { BOOMER, H, MAXT, PRISM, SPAWN_Y, SPECIALS, TIERS } from '../config.js';
 import { store } from '../core/storage.js';
 export function createGamePals({ game }) {
   /** @returns {import('./types.js').Pal} */
@@ -35,18 +35,43 @@ export function createGamePals({ game }) {
     bt: 2 + Math.random() * 3,
     bl: 0,
   });
+  /** Height of the highest pal's top edge: small means a dangerous pile. */
+  const pileTop = () => game.bodies.reduce((top, b) => Math.min(top, b.y - b.r), H);
+  /**
+   * The next pal. Every random choice comes from `game.rand`, so a daily run deals the same pals
+   * to everyone; there the specials on offer do not depend on the player's level either.
+   * Bigger pals arrive as the run goes on (by drops, not score: tempo must not set difficulty).
+   */
   function pick() {
+    const rand = game.rand;
     if (game.pickCount++ < 2) return 0;
-    const L = store.get('lvl', 1),
-      av = SPECIALS.filter((x) => x.t === PRISM || L >= x.req);
+    const L = game.daily ? Infinity : store.get('lvl', 1),
+      av = SPECIALS.filter((x) => x.t === PRISM || L >= x.req),
+      open = !(game.held && game.held.t >= PRISM) && game.nextTier < PRISM;
+    // Once a Solis stands in the box the Sun is one wildcard away, and the game makes sure it comes.
     if (
-      game.drops >= 10 &&
-      !(game.held && game.held.t >= PRISM) &&
-      game.nextTier < PRISM &&
-      Math.random() < Math.min(0.09, 0.03 + 0.012 * (av.length - 1))
+      open &&
+      game.drops - game.lastSpecialDrop >= 10 &&
+      game.bodies.some((b) => b.t === MAXT && !b.dead)
     ) {
+      game.lastSpecialDrop = game.drops;
+      return PRISM;
+    }
+    // A pile that has climbed into the top half, with no special for a while, is owed a Boomer.
+    if (
+      open &&
+      game.drops >= 10 &&
+      game.drops - game.lastSpecialDrop >= 25 &&
+      pileTop() < 100 &&
+      av.some((x) => x.t === BOOMER)
+    ) {
+      game.lastSpecialDrop = game.drops;
+      return BOOMER;
+    }
+    if (open && game.drops >= 10 && rand() < Math.min(0.09, 0.03 + 0.012 * (av.length - 1))) {
       const w = av.map((x) => (x.t === PRISM ? 2 : 1));
-      let r = Math.random() * w.reduce((a, b) => a + b, 0);
+      let r = rand() * w.reduce((a, b) => a + b, 0);
+      game.lastSpecialDrop = game.drops;
       for (let k = 0; k < av.length; k++) {
         r -= w[k];
         if (r <= 0) return av[k].t;
@@ -54,12 +79,12 @@ export function createGamePals({ game }) {
       return PRISM;
     }
     const w =
-      game.score > 3000
-        ? [22, 24, 22, 19, 13]
-        : game.score > 1200
-          ? [28, 27, 21, 15, 9]
+      game.drops >= 150
+        ? [20, 22, 22, 20, 16]
+        : game.drops >= 70
+          ? [26, 25, 21, 17, 11]
           : [32, 28, 20, 13, 7];
-    let s = Math.random() * 100;
+    let s = rand() * 100;
     for (let i = 0; i < w.length; i++) {
       s -= w[i];
       if (s <= 0) return i;

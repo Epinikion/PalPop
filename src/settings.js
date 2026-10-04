@@ -19,7 +19,16 @@ export const PHYSICS = Object.freeze({
 export const GAMEPLAY = Object.freeze({
   dropVelocity: 95,
   dropCooldown: 0.24,
-  comboWindow: 1.4,
-  extraComboTime: 0.1,
-  maxExtraComboSteps: 3,
+  /** Seconds in which a merge's product must merge again to extend a chain. */
+  chainWindow: 0.9,
+  /** After this many seconds the lose line starts to descend... */
+  squeezeStart: 180,
+  /** ...one pixel every this many seconds... */
+  squeezeEvery: 8,
+  /** ...until it has come down by this much. */
+  squeezeMax: 10,
+  swapsAtStart: 5,
+  swapsMax: 8,
+  /** Merge-born pals may sit above the line this long before the 2 s countdown begins. */
+  mergeGrace: 1.5,
 });

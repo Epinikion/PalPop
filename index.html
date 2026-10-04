@@ -98,6 +98,8 @@
             <p class="np ol">
               <span id="tLvl">LV 1 ROOKIE</span><br /><span id="tNp">NEON CIRCUIT</span>
             </p>
+            <button id="dailyBtn" class="pbtn daily">DAILY</button>
+            <p class="np ol" id="tDaily"></p>
           </div>
           <div id="over" class="ovl" role="dialog" aria-label="Game over" hidden>
             <div class="panel">
@@ -107,6 +109,8 @@
               <div class="big" id="goScore">0</div>
               <div class="sub" id="goBest">BEST 0</div>
               <div class="newbest" id="goNew" hidden>NEW BEST!</div>
+              <div id="goRecap"></div>
+              <div id="goDaily" hidden></div>
               <div class="lvlbox">
                 <div class="lvlrow">
                   <span id="goLvl">LV 1 ROOKIE</span><span id="goXpTxt">+0 XP</span>
@@ -117,7 +121,9 @@
               <div id="goUnlock" hidden>
                 <canvas id="goUnCv"></canvas><span id="goUnTxt"></span>
               </div>
+              <div id="goQuests"></div>
               <button id="againBtn" class="pbtn primary">PLAY AGAIN</button>
+              <button id="freeBtn" class="pbtn" hidden>FREE PLAY</button>
               <button id="shareBtn" class="pbtn">SHARE SCORE</button>
             </div>
           </div>
