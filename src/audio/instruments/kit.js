@@ -1,4 +1,4 @@
-import { DRUM_NAMES, renderDrum, KICK_HZ } from './kit-dsp.js';
+import { DRUM_NAMES, renderDrum, KICK_HZ, kickTuning } from './kit-dsp.js';
 
 /**
  * Plays the rendered drum kit. Each hit is one buffer source and one gain, which is far cheaper
@@ -43,7 +43,7 @@ export function createKit({ audio, audioGraph, audioMath }) {
     name,
     t,
     v,
-    { pan = 0, rate = 1, variant, delaySend = 0, reverbSend = 0, to = 'dry' } = {},
+    { pan = 0, rate = 1, variant, delaySend = 0, reverbSend = 0, rumble = 0, to = 'dry' } = {},
   ) {
     warm();
     const buffers = drum(name),
@@ -64,16 +64,26 @@ export function createKit({ audio, audioGraph, audioMath }) {
       gain.connect(position);
     }
     outlet.connect(audio.graph.song[to] || audio.graph.song.dry);
+    const extras = position ? [gain] : [];
+    if (rumble > 0 && audio.graph.song.rum) {
+      // Techno's rumble bus is fed from the kick: a lowpassed, feeding-back echo of its body.
+      const send = audio.context.createGain();
+      send.gain.value = rumble;
+      gain.connect(send);
+      send.connect(audio.graph.song.rum);
+      extras.push(send);
+    }
     source.start(t);
     audioGraph.feed(outlet, delaySend, reverbSend);
-    audioGraph.releaseVoice(source, outlet, position ? [gain] : []);
+    audioGraph.releaseVoice(source, outlet, extras);
   }
   /**
    * Kick, retuned to `hz` (the kit's kicks settle on 46 Hz) and ducking the bass and synth buses.
-   * `duck` is how deep the sidechain dips; `variant` picks thud (0), punch (1) or long (2).
+   * `duck` is how deep the sidechain dips; `variant` picks thud (0), punch (1) or long (2);
+   * `rumble` feeds the kick into the rumble bus where the song has one.
    */
-  function eKitKick(t, v, duck, hz = KICK_HZ, variant) {
-    hit('kick', t, v, { rate: hz / KICK_HZ, variant });
+  function eKitKick(t, v, duck, hz = KICK_HZ, variant, rumble = 0) {
+    hit('kick', t, v, { rate: hz / KICK_HZ, variant, rumble });
     if (duck > 0) {
       const song = audio.graph.song,
         d = song.duck.gain;
@@ -88,6 +98,7 @@ export function createKit({ audio, audioGraph, audioMath }) {
   }
   const flash = () => (audio.stemFlash.drums = 0.14);
   return {
+    kickTuning,
     eKitKick,
     /** Two takes a few milliseconds apart, panned either side of `pan`: a clap that fills the room. */
     eKitClap(t, v, pan = 0) {
@@ -113,12 +124,13 @@ export function createKit({ audio, audioGraph, audioMath }) {
       hit('ride', t, v, { pan, reverbSend: 0.08 });
       flash();
     },
-    eKitCrash(t, v) {
-      hit('crash', t, v, { reverbSend: 0.2 });
+    /** The long crash rings for over two seconds; the short one is a splash that is gone in one. */
+    eKitCrash(t, v, long = true) {
+      hit('crash', t, v, { variant: long ? 0 : 1, reverbSend: 0.2 });
       audio.stemFlash.drums = 0.3;
     },
-    eKitTom(t, v, pitch = 1, pan = 0) {
-      hit('tom', t, v, { variant: pitch, pan, reverbSend: 0.14, delaySend: 0.1 });
+    eKitTom(t, v, pitch = 1, pan = 0, rate = 1) {
+      hit('tom', t, v, { variant: pitch, rate, pan, reverbSend: 0.14, delaySend: 0.1 });
       flash();
     },
     /** A tuned metallic hit at a MIDI note: the percussive melody of techno. */

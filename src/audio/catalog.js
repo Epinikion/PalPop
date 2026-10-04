@@ -20,7 +20,7 @@ const TRACKS = {
     label: 'MELODIC HOUSE / SUNG HOOKS + PIANO',
     name: 'GOLDEN HOUR',
     style: 'vocal',
-    trim: 0.94,
+    trim: 1.08,
     vocals: true,
     bpm: 122,
     description:
@@ -31,7 +31,7 @@ const TRACKS = {
     label: 'FESTIVAL HOUSE / PIANO + BIG SYNTH HOOK',
     name: 'SKYLINE RUSH',
     style: 'festival',
-    trim: 1,
+    trim: 1.2,
     bpm: 128,
     description:
       'UPLIFTING PIANO CHORDS, A WIDE SYNTH HOOK AND BIG BUILDS INTO PUMPING DROPS. FAMILIAR THEMES RETURN AS THE SONG KEEPS EVOLVING.',
@@ -41,7 +41,7 @@ const TRACKS = {
     label: 'TECHNO / ACID + ROLLING BASS',
     name: 'LIVE TECHNO',
     style: 'techno',
-    trim: 0.7,
+    trim: 0.8,
     bpm: 136,
     description:
       'ROLLING BASS, ACID AND DUB CHORDS. MERGES LIFT THE GROOVE. THE SET KEEPS PLAYING BETWEEN GAMES.',
@@ -51,7 +51,7 @@ const TRACKS = {
     label: 'ELECTRO / PUMPING BASS + SYNTH STABS',
     name: 'NEON CIRCUIT',
     style: 'dance',
-    trim: 1.1,
+    trim: 1.33,
     bpm: 130,
     description:
       'PUMPING FOUR-ON-THE-FLOOR ELECTRO. SAW SYNTHS, SYNCOPATED BASS AND FRESH EIGHT-BAR PHRASES. THE HARMONY AND ARRANGEMENT KEEP REGENERATING.',

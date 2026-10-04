@@ -1,4 +1,7 @@
-export function createTransitions({ audio, audioGraph, audioMath }) {
+/** Keeps the kit's crash at the loudness the noise crash had in the arrangements' mixes. */
+const CRASH_GAIN = 2.7;
+
+export function createTransitions({ audio, audioGraph, audioMath, kit }) {
   /* acid zap: quick resonant pitch-down squeal as a sparse peak accent */
   function eZap(t, v) {
     const o = audio.context.createOscillator(),
@@ -136,28 +139,9 @@ export function createTransitions({ audio, audioGraph, audioMath }) {
       band,
     ]);
   }
-  /** Crash cymbal: wide noise burst with a bright strike and a long, shaded tail. */
+  /** Crash cymbal from the kit: `long` rings for a couple of seconds, otherwise a short splash. */
   function eCrash(t, v, long) {
-    const noise = noisePair(t, long ? 2.2 : 1.4, 0.45),
-      hp = audio.context.createBiquadFilter(),
-      g = audio.context.createGain();
-    hp.type = 'highpass';
-    hp.frequency.value = 4600;
-    v *= 1.35;
-    g.gain.setValueAtTime(v, t);
-    g.gain.exponentialRampToValueAtTime(v * 0.35, t + 0.18);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + (long ? 2 : 1.2));
-    noise.mix.connect(hp);
-    hp.connect(g);
-    g.connect(audio.graph.song.dry);
-    audioGraph.feed(g, 0, 0.3);
-    audio.stemFlash.drums = 0.3;
-    audioGraph.releaseVoice(noise.sources[0], g, [
-      ...noise.sources.slice(1),
-      ...noise.nodes,
-      noise.mix,
-      hp,
-    ]);
+    kit.eKitCrash(t, v * CRASH_GAIN, long);
   }
   function eImpact(t, v) {
     const o = audio.context.createOscillator(),

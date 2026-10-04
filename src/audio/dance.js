@@ -53,7 +53,15 @@ export function createAudioDance({
     if (si === 0) audioInstruments.eSpace(t, rest ? 1.7 : build ? 1.25 : peak ? 0.9 : 1);
     if ((!rest || section.bs >= section.len - 2) && !dropout) {
       // A pronounced sidechain pulse drives both the bass and synth buses.
-      if (si % 4 === 0) audioInstruments.eKick(t, 0.49 * LEVEL.kick, peak ? 0.66 : 0.55, 0);
+      if (si % 4 === 0)
+        audioInstruments.eKick(
+          t,
+          0.49 * LEVEL.kick,
+          peak ? 0.66 : 0.55,
+          0,
+          audioInstruments.kickTuning(session.pc),
+          1,
+        );
       if (si === 4 || si === 12)
         audioInstruments.eClap(
           t,

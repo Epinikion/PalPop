@@ -218,7 +218,8 @@ export function createAudioTechno({ audio, audioComposition, audioInstruments, a
     /* drums */
     const rumble = sec === 'PEAK' || sec === 'FINAL' ? 0.5 : sec === 'GROOVE' && bs >= 8 ? 0.28 : 0;
     const kickNow = L.kick && si % 4 === 0;
-    if (kickNow) audioInstruments.eKick(t, 0.95, L.duck, rumble);
+    const kickHz = audioInstruments.kickTuning(S.pc);
+    if (kickNow) audioInstruments.eKick(t, 0.95, L.duck, rumble, kickHz, 2);
     else if (
       L.kick &&
       (sec === 'PEAK' || sec === 'FINAL') &&
@@ -226,9 +227,9 @@ export function createAudioTechno({ audio, audioComposition, audioInstruments, a
       si === 14 &&
       vr(1) < 0.55
     )
-      audioInstruments.eKick(t, 0.55, L.duck, rumble * 0.6);
+      audioInstruments.eKick(t, 0.55, L.duck, rumble * 0.6, kickHz, 1);
     if (sec === 'BREAK' && bs === SA.len - 1 && si >= 8 && si % 2 === 0)
-      audioInstruments.eKick(t, 0.8, 0, 0);
+      audioInstruments.eKick(t, 0.8, 0, 0, kickHz, 1);
     if (L.hat === 1 && si % 4 === 2) hat(ts, false, 0.05 * (0.85 + 0.3 * r), pan, r * 0.6);
     if (L.hat === 2 && si % 2 === 1 && (sec !== 'GROOVE' || r > 0.1))
       hat(ts, false, (si % 4 === 3 ? 0.06 : 0.045) * (0.85 + 0.3 * r), pan, r * 0.6);

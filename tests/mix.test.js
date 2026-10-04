@@ -7,6 +7,8 @@ import { createArrangements } from '../src/audio/song-registry.js';
 import { createAudioGraph } from '../src/audio/graph.js';
 import { createAudioOutput, MASTER_GAIN, SFX_GAIN } from '../src/audio/output.js';
 import { createDrums } from '../src/audio/instruments/drums.js';
+import { createKit } from '../src/audio/instruments/kit.js';
+import { KICK_HZ, kickTuning } from '../src/audio/instruments/kit-dsp.js';
 import { createTransitions } from '../src/audio/instruments/transitions.js';
 import { createSupersaw } from '../src/audio/instruments/supersaw.js';
 import { sweepFor } from '../src/audio/sweep.js';
@@ -185,25 +187,117 @@ test('supersaw voices are wide but symmetric, and one cleanup releases every osc
   assert(outlet.pan.value === 0 && extra.every((node) => node !== outlet));
 });
 
-test('the kick dips the synth bus instantly and lets it breathe back exponentially', () => {
+/** The drum voices on a recording rig: every hit's source, outlet and playback rate. */
+function drumRig({ rum = false } = {}) {
   const context = fakeContext(),
     duck = context.createGain(),
-    audio = {
-      context,
-      graph: { song: { dry: {}, drive: {}, duck, rum: null } },
-      stemFlash: {},
-    },
-    drums = createDrums({
+    cleanups = [],
+    song = { dry: context.createGain(), duck, rum: rum ? context.createGain() : null },
+    audio = { context, graph: { song }, stemFlash: {} },
+    dependencies = {
       audio,
-      audioMath: {},
-      audioGraph: { nsrc: () => context.createBufferSource(), releaseVoice() {} },
-    });
-  drums.eKick(5, 0.5, 0.7, 0);
+      audioMath: createAudioMath({ seed: 1 }),
+      audioGraph: { feed() {}, releaseVoice: (...args) => cleanups.push(args) },
+    },
+    kit = createKit(dependencies);
+  return { context, duck, cleanups, song, drums: createDrums({ ...dependencies, kit }), kit };
+}
+
+test('the kick dips the synth bus instantly and lets it breathe back exponentially', () => {
+  const { drums, duck, cleanups } = drumRig();
+  drums.eKick(5, 0.5, 0.7, 0, 55, 1);
   const [dip, release] = duck.gain.calls;
   assert.deepEqual(dip.slice(0, 3), ['set', 1 - 0.7, 5]);
   assert.equal(release[0], 'target');
   assert.equal(release[1], 1);
   assert(release[3] > 0.03 && release[3] < 0.15, 'recovers within about a quarter of a beat');
+  assert(Math.abs(cleanups[0][0].playbackRate.value - 55 / KICK_HZ) < 1e-9, 'tuned to the key');
+});
+
+test('kick variants hold their loudness and the rumble feed rides on the kick', () => {
+  const levels = [0, 1, 2].map((variant) => {
+      const { drums, cleanups } = drumRig();
+      drums.eKick(1, 0.5, 0, 0, undefined, variant);
+      return cleanups[0][1].gain.value;
+    }),
+    { drums, cleanups, song } = drumRig({ rum: true });
+  assert(
+    levels.every((level) => level > 0.4 && level < 0.9),
+    levels.join(),
+  );
+  drums.eKick(1, 0.5, 0, 0.5);
+  const [, outlet, extra] = cleanups[0];
+  assert(
+    extra.some((node) => reaches(node, song.rum)),
+    'a send into the rumble bus',
+  );
+  assert(outlet.gain.value > 0);
+  const quiet = drumRig({ rum: true });
+  quiet.drums.eKick(1, 0.5, 0, 0);
+  assert(!quiet.cleanups[0][2].length, 'no rumble, no send');
+});
+
+test('the old drum vocabulary maps onto the kit', () => {
+  const { drums, context, cleanups } = drumRig(),
+    hit = () => cleanups.at(-1),
+    buffers = () => context.nodes.filter((node) => node.kind === 'buffer');
+  const before = buffers().length;
+  drums.eHat(1, false, 0.05, -0.2, 0.5);
+  drums.eHat(1.2, true, 0.075, 0.2, 0.5);
+  drums.eShaker(1.4, 0.02, 0.1);
+  drums.eRide(1.6, 0.03, 0.1);
+  drums.eSnare(1.8, 0.05, 1.2);
+  assert.equal(buffers().length - before, 5, 'one buffer voice per drum');
+  assert.equal(hit()[0].playbackRate.value, 1.2, 'a snare roll is tuned up by its pitch');
+  drums.eClap(2, 0.1);
+  assert.equal(buffers().length - before, 7, 'a clap is two takes');
+  // Toms: a glide from f0 is heard as its middle, so each f0 lands on the nearest kit tom.
+  const rates = [125, 150, 170, 200, 230].map((f0) => {
+    drums.eTom(3, f0, 0.3);
+    return hit()[0].playbackRate.value;
+  });
+  assert(
+    rates.every((rate) => rate > 0.75 && rate < 1.25),
+    rates.join(),
+  );
+  assert(rates[0] < rates[4], 'higher toms play higher');
+  drums.ePerc(4, 'tick', 0.05, 0.2);
+  drums.ePerc(4.1, 'conga', 0.05, 0.2);
+  drums.ePerc(4.2, 'blip', 0.05, 0.2, 60);
+  // The blip is a ping at the note an octave above: C5 is closest to the 640 Hz ping.
+  assert(Math.abs(cleanups.at(-1)[0].playbackRate.value * 640 - 440 * 2 ** ((72 - 69) / 12)) < 1);
+  assert.equal(cleanups.at(-2)[0].playbackRate.value, 1.5, 'a conga is a high, short tom');
+});
+
+test('every crash is a kit crash: the long one rings, the short one is a splash', () => {
+  const context = fakeContext(),
+    cleanups = [],
+    song = { dry: context.createGain() },
+    audio = { context, graph: { song }, stemFlash: {} },
+    dependencies = {
+      audio,
+      audioMath: createAudioMath({ seed: 1 }),
+      audioGraph: { feed() {}, releaseVoice: (...args) => cleanups.push(args) },
+    },
+    kit = createKit(dependencies),
+    { eCrash } = createTransitions({ ...dependencies, kit });
+  eCrash(1, 0.07, true);
+  eCrash(3, 0.07, false);
+  const [long, short] = cleanups.map(([source]) => source.buffer.length);
+  assert(long > short * 1.3, 'the splash is shorter');
+  assert(audio.stemFlash.drums > 0.2);
+});
+
+test('kicks follow the key: the root where it carries, its fifth or fourth where it would not', () => {
+  for (let pc = 0; pc < 12; pc++) {
+    const hz = kickTuning(pc),
+      semitones = 12 * Math.log2(hz / 440) + 69,
+      interval = (((Math.round(semitones) - pc) % 12) + 12) % 12;
+    assert(hz >= 46 && hz <= 62, `pitch class ${pc} -> ${hz}`);
+    assert([0, 7, 5].includes(interval), `pitch class ${pc} is tuned to a root, fifth or fourth`);
+  }
+  assert(Math.abs(kickTuning(9) - 55) < 0.1 && Math.abs(kickTuning(7) - 49) < 0.1);
+  assert(Math.abs(kickTuning(0) - 49) < 0.1, 'C takes its fifth, G');
 });
 
 test('the WAV analyzer reports level, tonal balance and stereo width', () => {

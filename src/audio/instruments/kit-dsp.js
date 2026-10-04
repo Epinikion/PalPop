@@ -201,6 +201,15 @@ function shaker(sampleRate, { centre }, random) {
 
 /** The frequency every kick variant settles on: the kit retunes it with `playbackRate`. */
 export const KICK_HZ = 46;
+/** Bass notes (MIDI) a kick is tuned to, per key (pitch class 0-11): F#1 to B1, 46-62 Hz. */
+const KICK_NOTES = [31, 32, 33, 34, 35, 34, 30, 31, 32, 33, 34, 35];
+/**
+ * The kick's fundamental for a key: the root itself where it lies in the range a kick carries and
+ * sits well on small speakers, otherwise its fifth (or for F its fourth), all consonant with the bass.
+ */
+export function kickTuning(pc) {
+  return 440 * 2 ** ((KICK_NOTES[pc] - 69) / 12);
+}
 /** Renders every drum of the kit. Variants are fixed, so the result depends only on the rate. */
 const DRUMS = (() => {
   const make = (variants, render) => ({ variants, render });
@@ -305,7 +314,10 @@ const DRUMS = (() => {
       metal,
     ),
     crash: make(
-      [{ scale: 0.92, time: 0.62, quick: true, length: 2.4, band: 6500, low: 3000, grit: 0.55 }],
+      [
+        { scale: 0.92, time: 0.62, quick: true, length: 2.4, band: 6500, low: 3000, grit: 0.55 },
+        { scale: 0.97, time: 0.34, quick: true, length: 1.5, band: 7000, low: 3400, grit: 0.5 },
+      ],
       metal,
     ),
     tom: make(

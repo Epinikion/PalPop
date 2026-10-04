@@ -64,7 +64,12 @@ export function fakeContext() {
     },
     createPeriodicWave: (real, imag) => ({ real, imag }),
     createBufferSource: () => make('buffer', ['playbackRate']),
-    createBuffer: (channels, length) => ({ getChannelData: () => new Float32Array(length) }),
+    createBuffer: (channels, length, sampleRate) => ({
+      length,
+      sampleRate,
+      numberOfChannels: channels,
+      getChannelData: () => new Float32Array(length),
+    }),
   };
 }
 export function reaches(from, target, seen = new Set()) {

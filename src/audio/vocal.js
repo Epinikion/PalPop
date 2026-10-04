@@ -92,7 +92,8 @@ export function createAudioVocal({
           (intro || outro ? 0.4 : chorus ? 0.55 : verse ? 0.47 : 0.5) * LEVEL.kick,
           intro || outro ? 0.32 : chorus ? 0.66 : 0.5,
           0,
-          chorus ? 1.1 : 1,
+          audioInstruments.kickTuning(session.pc),
+          chorus ? 1 : 0,
         );
       if ((si === 4 || si === 12) && (chorus || pre || (verse && section.bs >= 2)))
         audioInstruments.eClap(t, (chorus ? 0.15 : 0.1) * LEVEL.clap);

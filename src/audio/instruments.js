@@ -9,15 +9,18 @@ import { createKit } from './instruments/kit.js';
 import { createWarehouse } from './instruments/warehouse.js';
 /** Shared voice interface used by arrangements and gameplay accents. */
 export function createAudioInstruments(dependencies) {
+  // One kit serves every drum voice, so its buffers are rendered once per context.
+  const kit = createKit(dependencies),
+    shared = { ...dependencies, kit };
   return {
-    ...createDrums(dependencies),
+    ...createDrums(shared),
     ...createSynths(dependencies),
     ...createDance(dependencies),
     ...createFestival(dependencies),
-    ...createTransitions(dependencies),
+    ...createTransitions(shared),
     eSawPluck: createSupersaw(dependencies).eSawPluck,
     ...createVocal(dependencies),
-    ...createKit(dependencies),
+    ...kit,
     ...createWarehouse(dependencies),
   };
 }

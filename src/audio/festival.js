@@ -70,7 +70,8 @@ export function createAudioFestival({
           (intro ? 0.44 : peak ? 0.55 : build ? 0.46 : 0.5) * LEVEL.kick,
           intro ? 0.4 : peak ? 0.7 : 0.58,
           0,
-          peak ? 1.12 : 1,
+          audioInstruments.kickTuning(session.pc),
+          peak ? 1 : 0,
         );
       if (!intro && (si === 4 || si === 12))
         audioInstruments.eClap(t, (peak ? 0.17 : 0.12) * LEVEL.clap);
