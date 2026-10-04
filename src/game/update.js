@@ -2,6 +2,8 @@ import { RM } from '../core/dom.js';
 import { FL, FR, FT, H, LOSE_Y, TIERS, W } from '../config.js';
 import { GAMEPLAY } from '../settings.js';
 import { clamp } from '../core/math.js';
+import { store } from '../core/storage.js';
+import { learnHint } from './hints.js';
 export function createGameUpdate({
   audio,
   audioReactions,
@@ -147,6 +149,7 @@ export function createGameUpdate({
         game.loseY = LOSE_Y + squeeze;
         if (squeeze % 4 === 0) gameEffects.popup(W / 2, 40, 'SQUEEZE!', '#ff9a3c', 1, 1.2);
       }
+      const wasDanger = game.danger;
       game.danger = false;
       for (const b of game.bodies) {
         // The top edge counts a little inside the pal: a nose touching the line is not a loss.
@@ -168,7 +171,11 @@ export function createGameUpdate({
           game.heartbeatTime = 0.72;
           if (game.phase === 'play') audioReactions.reactToEvent('danger');
         }
-      } else game.heartbeatTime = 0;
+      } else {
+        game.heartbeatTime = 0;
+        // Getting out of a squeeze once is the lesson: the line hint has done its job.
+        if (wasDanger) learnHint(store, game.hints, 'line');
+      }
     } else if (game.phase === 'dying') {
       game.danger = false;
       game.dying.acc += dt;

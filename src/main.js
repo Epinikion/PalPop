@@ -200,7 +200,6 @@ function refreshMusicSettings() {
   gameActions.setTitleInfo();
   uiInterface.setPage();
   uiInterface.renderRadio();
-  $('#sndBtn').textContent = audio.enabled ? 'SOUND' : 'MUTE';
 }
 /* ================= boot ================= */
 let last = 0;

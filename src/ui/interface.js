@@ -1,4 +1,4 @@
-import { $ } from '../core/dom.js';
+import { $, feel, vib } from '../core/dom.js';
 import { H, MAXT, PRISM, SPECIALS, TIERS, W } from '../config.js';
 import { TRACK_IDS, TRACKS } from '../audio/catalog.js';
 import { dailyNumber, dailyState, dayKey, streak } from '../game/records.js';
@@ -213,9 +213,38 @@ export function createUiInterface({
     });
     return { id, button };
   });
+  // A pixel speaker on the bar: waves while the sound is on, a red cross while it is muted.
+  const muteGfx = $('#muteCv').getContext('2d');
+  function drawMute() {
+    muteGfx.clearRect(0, 0, 11, 9);
+    muteGfx.fillStyle = audio.enabled ? '#fbeed8' : '#ff6b8a';
+    for (const [x, y, w, h] of [
+      [0, 3, 2, 3],
+      [2, 2, 1, 5],
+      [3, 1, 1, 7],
+    ])
+      muteGfx.fillRect(x, y, w, h);
+    const dots = audio.enabled
+      ? [
+          [5, 3, 1, 3],
+          [7, 2, 1, 5],
+          [9, 1, 1, 7],
+        ]
+      : [6, 7, 8, 9, 10].flatMap((x, i) => [
+          [x, 2 + i, 1, 1],
+          [x, 6 - i, 1, 1],
+        ]);
+    for (const [x, y, w, h] of dots) muteGfx.fillRect(x, y, w, h);
+    $('#muteBtn').setAttribute('aria-pressed', String(!audio.enabled));
+    $('#muteBtn').setAttribute(
+      'aria-label',
+      audio.enabled ? 'Sound on. Tap to mute everything' : 'Sound off. Tap to turn it back on',
+    );
+  }
   function renderRadio() {
     $('#musTog').setAttribute('aria-pressed', String(audio.enabled));
     $('#musTog').textContent = 'SOUND ' + (audio.enabled ? 'ON' : 'OFF');
+    drawMute();
     for (const { id: i, button: b } of songButtons) {
       b.classList.toggle('on', audio.trackId === i);
       b.setAttribute('aria-pressed', String(audio.trackId === i));
@@ -354,13 +383,42 @@ export function createUiInterface({
   book.addEventListener('click', (e) => {
     if (e.target === book) closeBook();
   });
-  $('#musTog').addEventListener('click', () => {
+  function toggleSound() {
     audioRuntime.initAudio();
     audio.enabled = !audio.enabled;
     store.set('mus', audio.enabled);
     audioRuntime.applyAudio();
     renderRadio();
+  }
+  $('#musTog').addEventListener('click', toggleSound);
+  $('#muteBtn').addEventListener('click', toggleSound);
+  // Haptics and screen flashes can be switched off; both choices are saved.
+  feel.haptics = store.get('haptics', true) !== false;
+  feel.flashes = store.get('flashes', true) !== false;
+  // iPhones have no web vibration, so the switch would do nothing there.
+  if (!navigator.vibrate) $('#vibTog').hidden = true;
+  function renderFeel() {
+    for (const [id, on, label] of [
+      ['vibTog', feel.haptics, 'HAPTICS'],
+      ['flashTog', feel.flashes, 'FLASHES'],
+    ]) {
+      $('#' + id).setAttribute('aria-pressed', String(on));
+      $('#' + id).textContent = label + (on ? ' ON' : ' OFF');
+    }
+    document.documentElement.classList.toggle('calm', !feel.flashes);
+  }
+  $('#vibTog').addEventListener('click', () => {
+    feel.haptics = !feel.haptics;
+    store.set('haptics', feel.haptics);
+    renderFeel();
+    vib(20);
   });
+  $('#flashTog').addEventListener('click', () => {
+    feel.flashes = !feel.flashes;
+    store.set('flashes', feel.flashes);
+    renderFeel();
+  });
+  renderFeel();
   $('#radioClose').addEventListener('click', closeRadio);
   let focusReturn = null;
   function openDialog(el) {

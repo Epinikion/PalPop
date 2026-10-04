@@ -46,6 +46,7 @@ export function createGameState(storage = store) {
   game.didDrop = false;
   game.didMerge = false;
   game.didSwap = false;
+  game.hints = new Set();
   game.shakeMagnitude = 0;
   game.quakeTime = 0;
   game.freeze = 0;

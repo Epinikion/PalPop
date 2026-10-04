@@ -18,6 +18,8 @@ const assets = [
   'manifest.webmanifest',
   'icon-192.png',
   'icon-512.png',
+  'icon-maskable-192.png',
+  'icon-maskable-512.png',
   'apple-touch-icon.png',
   'tools/pal-designer.html',
   ...(await walk('src')),

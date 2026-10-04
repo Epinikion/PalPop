@@ -6,11 +6,14 @@ const mkc = (w, h) => {
   c.height = h;
   return c;
 };
+/** Player switches for the two physical effects; the Sound sheet flips them and saves them. */
+const feel = { haptics: true, flashes: true };
 const vib = (p) => {
+  if (!feel.haptics) return;
   try {
     navigator.vibrate && navigator.vibrate(p);
   } catch (e) {}
 };
 
 /* ================= effects ================= */
-export { RM, $, mkc, vib };
+export { RM, $, mkc, vib, feel };

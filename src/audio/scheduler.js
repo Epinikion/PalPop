@@ -2,6 +2,17 @@
 const PIANO_ACCENT = 1.8;
 const STAB_ACCENT = 2.2;
 
+/**
+ * How far ahead the scheduler plans notes. A late tick means the page was busy (a slow phone, a
+ * heavy frame): the look-ahead then widens to cover that gap so the music never starves, and it
+ * relaxes again while ticks arrive on time. `gap` is the time since the previous tick.
+ */
+export function adaptLook(look, gap, base, max = 0.6, tick = 0.035) {
+  if (!(gap > 0) || gap > 1.5) return look; // first tick, or the page was suspended
+  if (gap > tick * 2.5) return Math.min(max, Math.max(look, gap + 0.12));
+  return Math.max(base, look - gap * 0.02);
+}
+
 export function createAudioScheduler({
   audio,
   audioComposition,
@@ -21,10 +32,18 @@ export function createAudioScheduler({
       !audio.session ||
       audio.context.state !== 'running' ||
       !audio.playing
-    )
+    ) {
+      audio.lastTick = -1;
       return;
+    }
     const now = audio.context.currentTime,
       S = audio.session;
+    audio.look = adaptLook(
+      audio.look || audioComposition.LOOK,
+      audio.lastTick >= 0 ? now - audio.lastTick : 0,
+      audioComposition.LOOK,
+    );
+    audio.lastTick = now;
     if (audio.nextStepTime < now) {
       const k = Math.max(0, Math.ceil((now + 0.015 - audio.songStart) / S.s16));
       audio.step = k;
@@ -32,7 +51,7 @@ export function createAudioScheduler({
     }
     const on = audio.enabled && audio.volume > 0;
     if (on) {
-      while (audio.nextStepTime < now + audioComposition.LOOK) {
+      while (audio.nextStepTime < now + audio.look) {
         arrangements[audio.session.style](audio.step, audio.nextStepTime);
         audio.step++;
         audio.nextStepTime = audio.songStart + audio.step * S.s16;

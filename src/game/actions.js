@@ -32,6 +32,7 @@ import {
   recordRun,
   streak,
 } from './records.js';
+import { learnHint, loadHints } from './hints.js';
 import { TRACKS } from '../audio/catalog.js';
 import { BADGE_XP, checkBadges } from './badges.js';
 import { dailyMutator, mutatorById, newMutators, offerMutators } from './mutators.js';
@@ -145,6 +146,7 @@ export function createGameActions({
     game.bestStart = game.bestBase;
     game.bestAnnounced = false;
     game.didDrop = game.didMerge = game.didSwap = false;
+    game.hints = loadHints(store);
     game.danger = false;
     game.loseY = LOSE_Y;
     uiElements.scoreEl.textContent = '0';
@@ -190,6 +192,7 @@ export function createGameActions({
     game.dropCooldown = GAMEPLAY.dropCooldown / game.pace;
     game.drops++;
     game.didDrop = true;
+    learnHint(store, game.hints, 'drop');
     game.canSwap = true;
     $('#nextBtn').classList.remove('used');
   }
@@ -204,6 +207,7 @@ export function createGameActions({
     game.canSwap = false;
     audioReactions.reactToEvent('swap', { x: game.held.x });
     game.didSwap = true;
+    learnHint(store, game.hints, 'swap');
     game.held.s = 0.6;
     game.held.sv = 0;
     $('#nextBtn').classList.add('used');
@@ -212,6 +216,7 @@ export function createGameActions({
   function doShake() {
     if (game.phase !== 'play' || game.charge < CH_MAX || game.paused) return;
     audioReactions.reactToEvent('shake');
+    learnHint(store, game.hints, 'shake');
     game.charge = 0;
     game.comboTime = 0;
     game.comboCount = 0;
@@ -312,6 +317,7 @@ export function createGameActions({
     a.dead = b.dead = true;
     game.merges++;
     game.didMerge = true;
+    learnHint(store, game.hints, 'merge');
     let t = a.t === PRISM && b.t === PRISM ? 3 : a.t === PRISM ? b.t : a.t;
     const x = (a.x + b.x) / 2,
       y = (a.y + b.y) / 2,

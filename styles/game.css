@@ -40,6 +40,7 @@
 }
 html {
   scroll-padding-top: env(safe-area-inset-top, 0px);
+  background: #161027;
 }
 html,
 body {
@@ -1705,9 +1706,11 @@ html {
     touch-action: none;
     overscroll-behavior: none;
   }
+  /* Pinned to the screen edges: in an iOS home-screen app 100dvh comes out short and leaves a band. */
   #app {
-    height: 100vh;
-    height: 100dvh;
+    position: fixed;
+    inset: 0;
+    height: auto;
     min-height: 0;
     width: 100%;
     max-width: none;
@@ -1847,8 +1850,9 @@ html {
     gap: 6px 10px;
     width: 100%;
     max-width: none;
-    height: 100vh;
-    height: 100dvh;
+    position: fixed;
+    inset: 0;
+    height: auto;
     padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
       max(6px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
     border: 0;
@@ -2071,4 +2075,38 @@ html {
 .rec {
   line-height: 1.7;
   text-align: center;
+}
+
+/* ===== Mute button on the bar, calm mode ===== */
+#muteBtn {
+  width: 44px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+#muteCv {
+  width: 33px;
+  height: 27px;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+#bar {
+  grid-template-columns: minmax(0, 1fr) 62px 62px 44px;
+}
+#vibTog[hidden] {
+  display: none;
+}
+/* The player turned flashes off: nothing on the page blinks or strobes. */
+html.calm *,
+html.calm *::before,
+html.calm *::after {
+  animation: none !important;
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  #bar {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px;
+  }
+  #shakeBtn {
+    grid-column: 1 / -1;
+  }
 }

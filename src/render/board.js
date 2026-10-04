@@ -1,6 +1,7 @@
 import { FL, FLOOR, FR, FT, H, PRISM, RAIL_Y, SPECIALS, TIERS, VMAX, W } from '../config.js';
-import { RM } from '../core/dom.js';
+import { RM, feel } from '../core/dom.js';
 import { clamp } from '../core/math.js';
+import { HINTS, pickHint } from '../game/hints.js';
 export function createRenderBoard({
   audio,
   game,
@@ -467,11 +468,8 @@ export function createRenderBoard({
       g.globalAlpha = 1;
     }
     if (game.phase === 'play' && !game.banner) {
-      let hint = null;
-      if (!game.didDrop) hint = 'DRAG & RELEASE';
-      else if (!game.didMerge) hint = 'SAME PALS MERGE!';
-      else if (game.merges < 4 && !game.didSwap && game.score < 12) hint = 'TAP NEXT TO SWAP';
-      else if (game.held && game.held.t >= PRISM && (game.spSeen[game.held.t] || 0) < 2)
+      let hint = HINTS[pickHint(game, game.hints)] || null;
+      if (!hint && game.held && game.held.t >= PRISM && (game.spSeen[game.held.t] || 0) < 2)
         hint = SPECIALS.find((x) => x.t === game.held.t).hint;
       if (hint) renderText.drawText(g, hint, W / 2, 56, '#fff', 1);
     }
@@ -485,7 +483,7 @@ export function createRenderBoard({
       renderText.drawText(g, '!', FL + 6, game.loseY - 9, '#ff4d6d', 1);
       renderText.drawText(g, '!', FR - 6, game.loseY - 9, '#ff4d6d', 1);
     }
-    if (game.flashOpacity > 0) {
+    if (game.flashOpacity > 0 && feel.flashes) {
       g.fillStyle =
         'rgba(255,255,255,' + Math.min(RM ? 0.12 : 0.35, game.flashOpacity).toFixed(2) + ')';
       g.fillRect(-4, -4, W + 8, H + 8);

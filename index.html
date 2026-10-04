@@ -139,6 +139,14 @@
         </button>
         <button id="bookBtn" class="pbtn" aria-label="Palbook: your pal collection">PALS</button>
         <button id="sndBtn" class="pbtn" aria-label="Music tracks and sound settings">SOUND</button>
+        <button
+          id="muteBtn"
+          class="pbtn"
+          aria-label="Sound on. Tap to mute everything"
+          aria-pressed="false"
+        >
+          <canvas id="muteCv" width="11" height="9" aria-hidden="true"></canvas>
+        </button>
       </div>
       <div class="now-playing">
         <span class="mini-eq" aria-hidden="true"><i></i><i></i><i></i></span
@@ -192,6 +200,10 @@
           </p>
         </div>
         <div class="row"><button id="musTog" class="pbtn">SOUND ON</button></div>
+        <div class="row">
+          <button id="vibTog" class="pbtn" aria-pressed="true">HAPTICS ON</button>
+          <button id="flashTog" class="pbtn" aria-pressed="true">FLASHES ON</button>
+        </div>
         <p class="credit">
           ALL SIX SONGS ARE PLAYED LIVE AND KEEP EVOLVING. YOUR SONG CHOICE IS SAVED. RETRY WITHOUT
           LOSING THE BEAT.
