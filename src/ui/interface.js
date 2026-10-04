@@ -252,8 +252,26 @@ export function createUiInterface({
     $('#engineName').textContent = TRACKS[audio.trackId].name;
     $('#songDescription').textContent = TRACKS[audio.trackId].description;
   }
+  // One line that says how big the phone thinks the window is, to chase layout problems that only
+  // show up in an installed iOS app: the page's window, the real screen, the app box and the insets.
+  function viewInfo() {
+    const probe = document.createElement('div');
+    probe.style.cssText =
+      'position:fixed;visibility:hidden;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)';
+    document.body.append(probe);
+    const style = window.getComputedStyle(probe),
+      inset = parseInt(style.paddingTop) + '+' + parseInt(style.paddingBottom),
+      app = $('#app').getBoundingClientRect(),
+      standalone = navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+    probe.remove();
+    $('#viewInfo').textContent =
+      `WINDOW ${window.innerWidth}X${window.innerHeight} / SCREEN ${window.screen.width}X${window.screen.height} / ` +
+      `APP ${Math.round(app.width)}X${Math.round(app.height)} / INSET ${inset} / ` +
+      (standalone ? 'INSTALLED' : 'BROWSER');
+  }
   function openRadio() {
     audioRuntime.initAudio();
+    viewInfo();
     radio.hidden = false;
     game.paused = true;
     renderRadio();

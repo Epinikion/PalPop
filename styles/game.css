@@ -1706,6 +1706,10 @@ html {
     touch-action: none;
     overscroll-behavior: none;
   }
+  /* Whatever shows below the app (the page canvas, an installed app's underlay) matches it. */
+  html {
+    background: #1c1432;
+  }
   /* Pinned to the screen edges: in an iOS home-screen app 100dvh comes out short and leaves a band. */
   #app {
     position: fixed;
