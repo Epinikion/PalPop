@@ -223,9 +223,24 @@ uiInterface.fit();
 uiInterface.drawLadder();
 requestAnimationFrame(frame);
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  // A new version installs and takes over by itself, but the page that is open still runs the old
+  // one. Reload into the new one as soon as the player is on the title screen, never mid-run.
+  const hadWorker = !!navigator.serviceWorker.controller;
+  let updated = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => (updated = hadWorker));
+  setInterval(() => {
+    if (
+      updated &&
+      game.phase === 'title' &&
+      !game.iris &&
+      uiInterface.radio.hidden &&
+      uiInterface.book.hidden
+    )
+      window.location.reload();
+  }, 1000);
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('sw.js')
+      .register('sw.js', { updateViaCache: 'none' })
       .then((registration) => registration.update())
       .catch(() => {});
   });

@@ -203,7 +203,7 @@ Switches in the Sound sheet: a speaker button on the bar mutes everything with o
 
 The app icon (the Blipp berry, big, on a dithered night-sky gradient with a glow) is drawn from the game's own sprites by `tools/icon-art.js`; open `tools/icons.html` through `npm start` to see all five sizes (`icon-192`, `icon-512`, `apple-touch-icon`, and the padded `icon-maskable-192` and `-512`) and save them next to `index.html`. The art is built on a 128 pixel grid at whole-number scale, and the maskable version keeps everything inside the circle Android may crop to. Installed on an iPhone, `src/ui/viewport.js` adds `html.home-bar` on tall screens so the button bar keeps 30 px clear of the home indicator, which iOS no longer reports without `viewport-fit=cover`.
 
-The service worker caches only this app's files and cleans only caches beginning with `palpop-`. Run `npm run cache:update` after editing shipped assets; `npm start` does this automatically. The generated `precache.js` hashes all runtime files, so changes produce a new offline cache version.
+The service worker caches only this app's files and cleans only caches beginning with `palpop-`. Run `npm run cache:update` after editing shipped assets; `npm start` does this automatically. The generated `precache.js` hashes all runtime files, so changes produce a new offline cache version. A new version installs and takes over by itself (`skipWaiting` and `clients.claim`), and the update check bypasses the HTTP cache; the page that is open still runs the old build, so `src/main.js` reloads it once the player is on the title screen (never mid-run, never with a sheet open).
 
 ## Verify
 
