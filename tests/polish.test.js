@@ -6,6 +6,7 @@ import { CH_MAX, W } from '../src/config.js';
 import { createRenderText } from '../src/render/text.js';
 import { HINTS, learnHint, loadHints, pickHint } from '../src/game/hints.js';
 import { adaptLook } from '../src/audio/scheduler.js';
+import { fullHeight } from '../src/ui/viewport.js';
 
 const memory = () => {
   const map = new Map();
@@ -103,4 +104,28 @@ test('the manifest ships padded maskable icons that the offline cache carries', 
     assert(precache.includes(icon.src), icon.src + ' is cached offline');
   }
   assert(manifest.icons.some((i) => i.purpose === 'any'));
+});
+
+test('an installed iOS 26 window that is one top inset short gets the screen height', () => {
+  // The numbers from a real iPhone 16 Pro: window 402x812, screen 402x874, top inset 62.
+  const phone = {
+    standalone: true,
+    innerWidth: 402,
+    innerHeight: 812,
+    screenWidth: 402,
+    screenHeight: 874,
+    topInset: 62,
+  };
+  assert.equal(fullHeight(phone), 874);
+  assert.equal(fullHeight({ ...phone, standalone: false }), null, 'a browser tab has toolbars');
+  assert.equal(fullHeight({ ...phone, innerHeight: 874 }), null, 'an already full window');
+  assert.equal(
+    fullHeight({ ...phone, innerHeight: 760 }),
+    null,
+    'a shortfall that is not the inset',
+  );
+  assert.equal(fullHeight({ ...phone, topInset: 0 }), null, 'no inset, no iOS 26 shortfall');
+  // Sideways the short edge of the screen is the height, and landscape has no top inset to lose.
+  assert.equal(fullHeight({ ...phone, innerWidth: 874, innerHeight: 402, topInset: 0 }), null);
+  assert.equal(fullHeight({ ...phone, innerWidth: 874, innerHeight: 340, topInset: 62 }), 402);
 });

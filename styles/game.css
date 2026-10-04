@@ -1714,7 +1714,7 @@ html {
   #app {
     position: fixed;
     inset: 0;
-    height: auto;
+    height: var(--app-h, auto);
     min-height: 0;
     width: 100%;
     max-width: none;
@@ -1856,7 +1856,7 @@ html {
     max-width: none;
     position: fixed;
     inset: 0;
-    height: auto;
+    height: var(--app-h, auto);
     padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
       max(6px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
     border: 0;
@@ -2112,5 +2112,15 @@ html.calm *::after {
   }
   #shakeBtn {
     grid-column: 1 / -1;
+  }
+}
+
+/* iOS 26 home-screen apps: the window comes out one top inset short, 100lvh is the full screen.
+   viewport.js sets --app-h when it sees that exact shortfall; this is the fallback without it. */
+@supports (-webkit-touch-callout: none) {
+  @media (display-mode: standalone) and (max-width: 699px) {
+    #app {
+      height: var(--app-h, 100lvh);
+    }
   }
 }
