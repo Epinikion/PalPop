@@ -641,10 +641,12 @@ export function createRenderSprites({}) {
     g.fillRect(0, 0, c.width, c.height);
     return c;
   }
+  /* Locked pals show as a silhouette that still reads against the dark panel. */
+  const LOCKED = '#54447f';
   const SPR = TIERS.map((t, i) => paint(i, t.r, t.m, false));
   const SPRB = TIERS.map((t, i) => paint(i, t.r, t.m, true));
   const WH = SPR.map((s) => silhouette(s, '#ffffff'));
-  const DK = SPR.map((s) => silhouette(s, '#1c0e40'));
+  const DK = SPR.map((s) => silhouette(s, LOCKED));
   /* ---- custom pals designed in tools/pal-designer.html (stored in localStorage) ---- */
   const CUSTOM = (() => {
     const out = {};
@@ -678,11 +680,32 @@ export function createRenderSprites({}) {
       SPR[t] = o;
       SPRB[t] = blinky || o;
       WH[t] = silhouette(SPR[t], '#ffffff');
-      DK[t] = silhouette(SPR[t], '#1c0e40');
+      DK[t] = silhouette(SPR[t], LOCKED);
       out[t] = 1;
     }
     return out;
   })();
+  /** A white one-pixel outline around a sprite: the landing spot is drawn with it. */
+  const OUT = SPR.map((spr) => {
+    const w = spr.width + 2,
+      h = spr.height + 2,
+      src = mkc(w, h),
+      g = src.getContext('2d');
+    g.drawImage(spr, 1, 1);
+    const data = g.getImageData(0, 0, w, h).data,
+      solid = (x, y) => x >= 0 && y >= 0 && x < w && y < h && data[(y * w + x) * 4 + 3] > 40,
+      out = mkc(w, h),
+      o = out.getContext('2d');
+    o.fillStyle = '#ffffff';
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++)
+        if (
+          !solid(x, y) &&
+          (solid(x - 1, y) || solid(x + 1, y) || solid(x, y - 1) || solid(x, y + 1))
+        )
+          o.fillRect(x, y, 1, 1);
+    return out;
+  });
   const HALO = TIERS.map((T) => {
     const R = T.r + 7,
       S = Math.ceil(R) * 2,
@@ -763,5 +786,5 @@ export function createRenderSprites({}) {
   };
 
   /* ================= themed worlds ================= */
-  return { SPR, ICON, SPRB, WH, HALO, DK, CUSTOM };
+  return { SPR, ICON, SPRB, WH, HALO, DK, OUT, CUSTOM };
 }

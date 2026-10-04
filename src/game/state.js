@@ -1,5 +1,5 @@
 import { store } from '../core/storage.js';
-import { W } from '../config.js';
+import { LOSE_Y, W } from '../config.js';
 import { MAXT } from '../config.js';
 /** Owns run data. Controllers receive this instance explicitly; nothing is kept on window. */
 export function createGameState(storage = store) {
@@ -32,6 +32,7 @@ export function createGameState(storage = store) {
   game.comboTime = 0;
   game.charge = 0;
   game.dropCooldown = 0;
+  game.queuedDrop = false;
   game.canSwap = true;
   game.pickCount = 0;
   game.nextBodyId = 0;
@@ -51,6 +52,7 @@ export function createGameState(storage = store) {
   game.freeze = 0;
   game.flashOpacity = 0;
   game.danger = false;
+  game.loseY = LOSE_Y;
   game.attractT = 0;
   game.highestTier = 0;
   game.pace = 1;

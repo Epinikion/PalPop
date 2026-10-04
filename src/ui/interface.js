@@ -30,9 +30,16 @@ export function createUiInterface({
         oy = Math.floor((box - spr.height * k) / 2);
       g.drawImage(spr, ox, oy, s, spr.height * k);
     } else {
-      g.imageSmoothingEnabled = true;
-      g.imageSmoothingQuality = 'high';
-      g.drawImage(spr, 0, 0, box, box);
+      // Too big to fit at 1:1: scale down without smoothing, so pixels stay hard-edged.
+      g.imageSmoothingEnabled = false;
+      const s = Math.min(box / spr.width, box / spr.height);
+      g.drawImage(
+        spr,
+        Math.floor((box - spr.width * s) / 2),
+        Math.floor((box - spr.height * s) / 2),
+        Math.round(spr.width * s),
+        Math.round(spr.height * s),
+      );
     }
   }
   function drawNext() {
@@ -116,8 +123,6 @@ export function createUiInterface({
         (audio.enabled ? '' : 'PAUSED · ') + TRACKS[audio.trackId].name;
       $('#tempoLabel').textContent = TRACKS[audio.trackId].bpm + ' BPM';
     }
-    const m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.content = renderWorlds.THEMES[VISUAL_THEME].bands[0];
   }
   const ORDER = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
   const book = $('#book');
@@ -222,7 +227,9 @@ export function createUiInterface({
   }
   function closeDialog() {
     $('#app').inert = false;
-    if (focusReturn && focusReturn.focus) focusReturn.focus();
+    // Back in a run the keyboard should still steer the pal, so focus goes to the board.
+    if (game.phase === 'play') uiElements.cv.focus({ preventScroll: true });
+    else if (focusReturn && focusReturn.focus) focusReturn.focus();
   }
   document.addEventListener('keydown', (e) => {
     const modal = !radio.hidden ? radio : !book.hidden ? book : null;
@@ -274,12 +281,10 @@ export function createUiInterface({
     ).matches;
     const aw = stage.clientWidth - (portraitMobile ? 10 : 14);
     const ah = stage.clientHeight - (portraitMobile ? 20 : 14);
-    let v = Math.min((aw * dpr) / W, (ah * dpr) / H);
-    // Board is fitted to the visible width AND height. Half-device-pixel steps keep it large
-    // while retaining the crisp nearest-neighbour pixel look.
-    let ds = portraitMobile ? Math.floor(v * 2) / 2 : Math.floor(v);
-    if (!portraitMobile && dpr < 3 && v - ds >= 0.5) ds += 0.5;
-    ds = Math.max(1, ds);
+    const v = Math.min((aw * dpr) / W, (ah * dpr) / H);
+    // Board is fitted to the visible width AND height in whole device pixels per game pixel:
+    // fractional steps make every second pixel row and column a different width.
+    const ds = Math.max(1, Math.floor(v));
     const cw = (W * ds) / dpr,
       ch = (H * ds) / dpr;
     uiElements.cv.style.width = cw + 'px';

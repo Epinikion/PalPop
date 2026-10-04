@@ -46,8 +46,17 @@ export function createRenderText({ game }) {
     '/': [1, 1, 2, 4, 4],
     ':': [0, 2, 0, 2, 0],
   };
+  /* M, N and W need five columns to read as themselves; everything else fits in three. */
+  const WIDE = {
+    M: [17, 27, 21, 17, 17],
+    N: [17, 25, 21, 19, 17],
+    W: [17, 17, 21, 27, 17],
+  };
+  const columns = (ch) => (WIDE[ch] ? 5 : 3);
   function textW(str, sc) {
-    return str.length * 4 * sc - sc;
+    let w = -1;
+    for (const ch of String(str).toUpperCase()) w += columns(ch) + 1;
+    return Math.max(0, w) * sc;
   }
   function drawText(g, str, x, y, col, sc, out) {
     str = String(str).toUpperCase();
@@ -60,12 +69,13 @@ export function createRenderText({ game }) {
       for (const ch of str) {
         if (c === 'rainbow')
           g.fillStyle = 'hsl(' + (((game.elapsed * 360 + ci++ * 45) % 360) | 0) + ',100%,66%)';
-        const gl = FONT[ch];
+        const gl = WIDE[ch] || FONT[ch],
+          n = columns(ch);
         if (gl)
           for (let r = 0; r < 5; r++)
-            for (let q = 0; q < 3; q++)
-              if (gl[r] & (4 >> q)) g.fillRect(cx + q * sc, y + oy + r * sc, sc, sc);
-        cx += 4 * sc;
+            for (let q = 0; q < n; q++)
+              if (gl[r] & (1 << (n - 1 - q))) g.fillRect(cx + q * sc, y + oy + r * sc, sc, sc);
+        cx += (n + 1) * sc;
       }
     };
     if (out !== false) {

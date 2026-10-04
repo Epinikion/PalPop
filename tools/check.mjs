@@ -4,7 +4,7 @@ import { parse } from '@babel/parser';
 import traverse from '@babel/traverse';
 const root = path.resolve(import.meta.dirname, '..');
 const browserGlobals = new Set(
-  'AbortController window document navigator location localStorage matchMedia Audio Worker Blob URL Uint8Array Float32Array DataView setInterval clearInterval setTimeout clearTimeout requestAnimationFrame cancelAnimationFrame ResizeObserver performance console Math Number String Boolean Object Array Map Set JSON Promise Infinity undefined globalThis'.split(
+  'AbortController window document navigator location localStorage matchMedia Audio Worker self Blob URL Uint8Array Float32Array DataView setInterval clearInterval setTimeout clearTimeout requestAnimationFrame cancelAnimationFrame ResizeObserver performance console Math Number String Boolean Object Array Map Set JSON Promise Infinity undefined globalThis'.split(
     ' ',
   ),
 );

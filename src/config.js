@@ -76,13 +76,13 @@ const TIERS = [
     n: 'Froggo',
     r: 11,
     m: 3,
-    ramp: ['#0d4a2a', '#2a9a4a', '#4fd66a', '#94f09a', '#eaffe8'],
+    ramp: ['#08443a', '#1d9a7c', '#2fd0a2', '#8cf2cc', '#e8fff6'],
   },
   {
     n: 'Tabby',
     r: 13,
     m: 4,
-    ramp: ['#6b2a08', '#d8681a', '#ff9a3c', '#ffc27a', '#fff1dc'],
+    ramp: ['#5a1a05', '#d8541a', '#ff8236', '#ffb878', '#fff1dc'],
   },
   {
     n: 'Pandi',
@@ -136,7 +136,7 @@ const TIERS = [
     n: 'Goldie',
     r: 9,
     m: 4,
-    ramp: ['#6a3d00', '#d99a00', '#ffcf1f', '#ffe66a', '#fff8c8'],
+    ramp: ['#4a2a00', '#b86a00', '#ffb000', '#ffd95a', '#fff2b0'],
   },
   {
     n: 'Zappy',

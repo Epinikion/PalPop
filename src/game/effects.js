@@ -77,6 +77,8 @@ export function createGameEffects({ game }) {
     });
   }
   function popup(x, y, txt, col, sc, life) {
+    // Never more than three at once: in a fever they would bury the board and each other.
+    while (game.popups.length >= 3) game.popups.shift();
     game.popups.push({
       x,
       y,
@@ -88,7 +90,7 @@ export function createGameEffects({ game }) {
     });
   }
   function shake(m) {
-    if (!RM) game.shakeMagnitude = Math.max(game.shakeMagnitude, m);
+    if (!RM) game.shakeMagnitude = Math.max(game.shakeMagnitude, Math.min(5, m));
   }
   function bumpEl(el) {
     el.classList.remove('bump');

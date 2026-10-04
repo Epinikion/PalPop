@@ -7,28 +7,56 @@ import { DRUM_NAMES, renderDrum, KICK_HZ, kickTuning } from './kit-dsp.js';
  */
 export function createKit({ audio, audioGraph, audioMath }) {
   const banks = new WeakMap();
-  /** A drum's buffers, rendered the first time they are needed (a few milliseconds each). */
-  function drum(name) {
-    const context = audio.context;
+  /** Turns rendered samples into audio buffers for this context. */
+  function store(context, name, variants) {
     if (!banks.has(context)) banks.set(context, {});
     const buffers = banks.get(context);
-    if (!buffers[name])
-      buffers[name] = renderDrum(name, context.sampleRate).map((data) => {
-        const buffer = context.createBuffer(1, data.length, context.sampleRate);
-        buffer.getChannelData(0).set(data);
-        return buffer;
-      });
+    buffers[name] ??= variants.map((data) => {
+      const buffer = context.createBuffer(1, data.length, context.sampleRate);
+      buffer.getChannelData(0).set(data);
+      return buffer;
+    });
     return buffers[name];
   }
+  /** A drum's buffers: ready from the worker, or rendered on the spot if a hit cannot wait. */
+  function drum(name) {
+    const context = audio.context;
+    return banks.get(context)?.[name] || store(context, name, renderDrum(name, context.sampleRate));
+  }
   /**
-   * Builds the remaining drums one per timer tick after the first hit, so no single beat has to
-   * wait for the whole kit. Skipped where there are no timers (offline renders build on demand).
+   * After the first hit the rest of the kit is built in the background: by a worker where there
+   * is one, otherwise one drum per timer tick so no single beat has to wait for the whole kit.
+   * Hits that arrive earlier render their drum on the spot.
    */
   const warming = new WeakSet();
+  /** Starts a worker that renders the whole kit; false where workers are unavailable. */
+  function render(context) {
+    if (typeof Worker !== 'function') return false;
+    try {
+      const worker = new Worker(new URL('./kit-worker.js', import.meta.url), { type: 'module' });
+      let left = DRUM_NAMES.length;
+      worker.onmessage = ({ data: { name, variants } }) => {
+        store(context, name, variants);
+        if (--left === 0) worker.terminate();
+      };
+      worker.onerror = () => {
+        worker.terminate();
+        if (audio.context === context) warmOnTimers(context);
+      };
+      worker.postMessage({ sampleRate: context.sampleRate });
+      return true;
+    } catch {
+      return false;
+    }
+  }
   function warm() {
     const context = audio.context;
-    if (warming.has(context) || typeof setTimeout !== 'function') return;
+    if (warming.has(context)) return;
     warming.add(context);
+    if (!render(context)) warmOnTimers(context);
+  }
+  function warmOnTimers(context) {
+    if (typeof setTimeout !== 'function') return;
     const pending = DRUM_NAMES.slice();
     const next = () => {
       const name = pending.shift();

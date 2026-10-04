@@ -49,7 +49,7 @@ export function createGameUpdate({
       if (!RM)
         game.shakeMagnitude = Math.max(
           game.shakeMagnitude,
-          2 + (9 * Math.max(0, game.quakeTime)) / 0.55,
+          2 + (3 * Math.max(0, game.quakeTime)) / 0.55,
         );
     }
     if (game.phase === 'title') {
@@ -78,6 +78,10 @@ export function createGameUpdate({
           game.nextTier = gamePals.pick();
           game.canSwap = true;
           uiInterface.drawNext();
+          if (game.queuedDrop) {
+            game.queuedDrop = false;
+            gameActions.drop();
+          }
         }
       }
       if (game.held) {
@@ -134,7 +138,7 @@ export function createGameUpdate({
       }
       game.danger = false;
       for (const b of game.bodies) {
-        if (b.age > 1.1 && b.y - b.r < LOSE_Y) {
+        if (b.age > 1.1 && b.y - b.r < game.loseY) {
           b.ot += game.iceTime > 0 ? 0 : dt;
           game.danger = true;
           if (b.ot > 2.0) {

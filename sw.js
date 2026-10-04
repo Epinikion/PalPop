@@ -25,17 +25,25 @@ self.addEventListener('activate', (event) =>
     })(),
   ),
 );
+/* Cache first: a launch never waits for the network, and works offline or on a bad connection.
+   The cache is versioned by content, so a new worker installs a complete, matching set. */
+const PAGE = new URL('index.html', self.registration.scope).href;
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
-  const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin || !assetURLs.has(url.href)) return;
+  const { request } = event;
+  if (request.method !== 'GET') return;
+  const url = new URL(request.url),
+    navigation = request.mode === 'navigate';
+  if (url.origin !== self.location.origin || !(navigation || assetURLs.has(url.href))) return;
   event.respondWith(
     (async () => {
+      const cached = await caches.match(navigation ? PAGE : request, {
+        cacheName: CACHE,
+        ignoreSearch: true,
+      });
+      if (cached) return cached;
       try {
-        return await fetch(event.request);
+        return await fetch(request);
       } catch {
-        const cached = await caches.match(event.request, { cacheName: CACHE });
-        if (cached) return cached;
         return new Response('This asset is unavailable offline.', { status: 503 });
       }
     })(),

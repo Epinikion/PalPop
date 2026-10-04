@@ -223,6 +223,9 @@ uiInterface.drawLadder();
 requestAnimationFrame(frame);
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker
+      .register('sw.js')
+      .then((registration) => registration.update())
+      .catch(() => {});
   });
 }

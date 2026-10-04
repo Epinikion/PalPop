@@ -8,6 +8,7 @@ import {
   FR,
   FT,
   G,
+  LOSE_Y,
   MAXT,
   PRISM,
   SCORE,
@@ -80,6 +81,7 @@ export function createGameActions({
     game.comboTime = 0;
     game.charge = 0;
     game.dropCooldown = 0;
+    game.queuedDrop = false;
     game.canSwap = true;
     game.pickCount = 0;
     game.merges = 0;
@@ -106,6 +108,7 @@ export function createGameActions({
     game.best = game.bestBase;
     game.didDrop = game.didMerge = game.didSwap = false;
     game.danger = false;
+    game.loseY = LOSE_Y;
     uiElements.scoreEl.textContent = '0';
     uiElements.bestEl.textContent = fmt(game.bestBase);
     updShake();
@@ -124,6 +127,11 @@ export function createGameActions({
     uiInterface.drawLadder();
   }
   function drop() {
+    // A tap that lands during the short cooldown is kept and played the moment the next pal arrives.
+    if (game.phase === 'play' && !game.held && game.dropCooldown > 0 && !game.paused) {
+      game.queuedDrop = true;
+      return;
+    }
     if (game.phase !== 'play' || !game.held || game.dropCooldown > 0 || game.paused) return;
     const radius = TIERS[game.held.t].r;
     game.held.x = clamp(game.aimX, FL + radius + 1, FR - radius - 1);
@@ -204,7 +212,7 @@ export function createGameActions({
     );
     game.banner = {
       t,
-      l: 2.0,
+      l: 1.3,
     };
     game.flashOpacity = Math.max(game.flashOpacity, 0.45);
     game.rays.push({
@@ -247,7 +255,7 @@ export function createGameActions({
         y = (a.y + b.y) / 2;
       if (a.t < MAXT) {
         const pal = gamePals.mk(t, x, y);
-        pal.s = 0.3;
+        pal.s = 0.55;
         pal.vx = mvx || 0;
         pal.vy = mvy || 0;
         game.bodies.push(pal);
@@ -314,8 +322,8 @@ export function createGameActions({
         L: 1.8,
         c: '#ffe45c',
       });
-      gameEffects.popup(x, y - 6, 'SUN BURST!', '#ffe45c', 1, 1.6);
-      gameEffects.popup(x, y + 6, '+' + pts, '#fff', 1, 1.6);
+      gameEffects.popup(x, Math.max(16, y - 14), 'SUN BURST!', '#ffe45c', 1, 1.6);
+      gameEffects.popup(x, Math.max(24, y), '+' + pts, '#fff', 1, 1.6);
       for (const o of game.bodies) o.flash = 1;
       gameEffects.shake(9);
       game.freeze = 0.1;
@@ -326,7 +334,7 @@ export function createGameActions({
     const nb = gamePals.mk(t + 1, x, y);
     nb.vx = clamp(mvx || 0, -100, 100);
     nb.vy = clamp((mvy || 0) - 38, -85, 35);
-    nb.s = 0.3;
+    nb.s = 0.55;
     nb.flash = 1;
     nb.age = 0.7;
     game.bodies.push(nb);
@@ -368,21 +376,16 @@ export function createGameActions({
         L: 0.9,
         c: rp[3],
       });
-    gameEffects.popup(
-      x,
-      y - TIERS[t + 1].r * 0.4,
-      '+' + pts,
-      mult > 1 ? '#ffe45c' : '#fff',
-      1,
-      0.8,
-    );
+    // Popups sit above the new pal, never on its face, and stay small enough to read the board.
+    const above = Math.max(16, y - TIERS[t + 1].r - 4);
+    gameEffects.popup(x, above, '+' + pts, mult > 1 ? '#ffe45c' : '#fff', 1, 0.8);
     if (game.comboCount > 1)
       gameEffects.popup(
         x,
-        y - TIERS[t + 1].r - 6,
+        Math.max(16, above - 8),
         'COMBO X' + Math.min(game.comboCount, 5) + (game.comboCount > 5 ? '+' : ''),
         game.comboCount >= 5 ? 'rainbow' : game.comboCount > 3 ? '#ffe45c' : '#7dffc4',
-        game.comboCount >= 4 ? 2 : 1,
+        1,
         1.1,
       );
     vib(t > 4 ? 25 : 10);
@@ -459,6 +462,7 @@ export function createGameActions({
     setTimeout(() => {
       if (game.phase !== 'over') return;
       $('#over').hidden = false;
+      $('#againBtn').focus({ preventScroll: true });
       const s0 = performance.now();
       (function tick(now) {
         const k = Math.min(1, (now - s0) / 900);

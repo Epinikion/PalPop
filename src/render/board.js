@@ -1,17 +1,4 @@
-import {
-  FL,
-  FLOOR,
-  FR,
-  FT,
-  H,
-  LOSE_Y,
-  PRISM,
-  RAIL_Y,
-  SPECIALS,
-  TIERS,
-  VMAX,
-  W,
-} from '../config.js';
+import { FL, FLOOR, FR, FT, H, PRISM, RAIL_Y, SPECIALS, TIERS, VMAX, W } from '../config.js';
 import { VISUAL_THEME } from '../audio/catalog.js';
 import { RM } from '../core/dom.js';
 import { clamp } from '../core/math.js';
@@ -31,6 +18,22 @@ export function createRenderBoard({
       ly = null;
     for (let i = 0; i < n; i++) {
       const a = (i / n) * 6.2832,
+        px = Math.round(x + Math.cos(a) * r),
+        py = Math.round(y + Math.sin(a) * r);
+      if (px === lx && py === ly) continue;
+      lx = px;
+      ly = py;
+      g.fillRect(px, py, 1, 1);
+    }
+  }
+  /** The first `part` (0-1) of a ring, clockwise from twelve o'clock, as hard pixels. */
+  function drawArc(g, x, y, r, part, c) {
+    g.fillStyle = c;
+    const n = Math.max(12, Math.round(r * 6.3 * part));
+    let lx = null,
+      ly = null;
+    for (let i = 0; i <= n; i++) {
+      const a = -1.5708 + (i / n) * 6.2832 * part,
         px = Math.round(x + Math.cos(a) * r),
         py = Math.round(y + Math.sin(a) * r);
       if (px === lx && py === ly) continue;
@@ -236,6 +239,8 @@ export function createRenderBoard({
         Math.round((Math.random() * 2 - 1) * game.shakeMagnitude),
         Math.round((Math.random() * 2 - 1) * game.shakeMagnitude),
       );
+    g.fillStyle = '#0e0628';
+    g.fillRect(-8, -8, W + 16, H + 16);
     const ti = VISUAL_THEME,
       tw = renderWorlds.WORLD[ti];
     if (game.themeK < 1 && game.themeFrom >= 0) {
@@ -249,7 +254,7 @@ export function createRenderBoard({
     drawEQ(g);
     if (game.feverT > 0) {
       g.globalCompositeOperation = 'overlay';
-      g.globalAlpha = 0.32;
+      g.globalAlpha = 0.18;
       g.fillStyle = 'hsl(' + (((game.elapsed * 120) % 360) | 0) + ',100%,60%)';
       g.fillRect(FL, FT, FR - FL, FLOOR - FT);
       g.globalAlpha = 1;
@@ -269,12 +274,6 @@ export function createRenderBoard({
       g.globalAlpha = 1;
       g.globalCompositeOperation = 'source-over';
     }
-    g.fillStyle = game.danger
-      ? ((game.elapsed * 8) | 0) % 2
-        ? '#ff4d6d'
-        : '#ffb3c0'
-      : 'rgba(255,255,255,.2)';
-    for (let x = FL + 1; x < FR - 1; x += 6) g.fillRect(x, LOSE_Y, 3, 1);
     if (game.phase === 'play' && game.held) {
       const r = TIERS[game.held.t].r;
       let yl = FLOOR - r;
@@ -287,18 +286,19 @@ export function createRenderBoard({
         }
       }
       const gx = Math.round(game.held.x);
-      g.fillStyle = 'rgba(255,255,255,.3)';
+      g.fillStyle = 'rgba(255,255,255,.45)';
       for (let y = Math.round(game.held.y + r + 3); y < yl + r - 2; y += 4) g.fillRect(gx, y, 1, 2);
       if (yl > game.held.y + 4) {
-        g.globalAlpha = 0.22;
-        const S = renderSprites.SPR[game.held.t].width;
-        g.drawImage(renderSprites.SPR[game.held.t], gx - S / 2, Math.round(yl) - S / 2);
+        const outline = renderSprites.OUT[game.held.t],
+          S = outline.width;
+        g.globalAlpha = 0.85;
+        g.drawImage(outline, gx - S / 2, Math.round(yl) - S / 2);
         g.globalAlpha = 1;
       }
     }
     g.globalCompositeOperation = 'lighter';
     for (const b of game.bodies) {
-      const a = b.t >= PRISM ? 0.4 : game.feverT > 0 ? 0.38 : b.t >= 7 ? 0.14 : 0;
+      const a = b.t >= PRISM ? 0.4 : game.feverT > 0 ? 0.16 : 0;
       if (a <= 0) continue;
       const hs = renderSprites.HALO[b.t].width;
       g.globalAlpha = a;
@@ -308,6 +308,17 @@ export function createRenderBoard({
     g.globalCompositeOperation = 'source-over';
     for (const b of game.bodies)
       drawPal(g, b, b.x, b.y, b.s, b.q - (clamp(b.vy, 0, VMAX) / VMAX) * 0.16, b.flash);
+    // The lose line is drawn over the pile so that nothing can hide it; a dark row under it keeps
+    // it readable on any background. In danger it turns solid and every culprit gets a ring that
+    // fills as its two seconds run out.
+    const flashRed = ((game.elapsed * 8) | 0) % 2;
+    g.fillStyle = 'rgba(27,18,48,.75)';
+    for (let x = FL + 1; x < FR - 1; x += game.danger ? 1 : 6) g.fillRect(x, game.loseY + 1, 3, 1);
+    g.fillStyle = game.danger ? (flashRed ? '#ff4d6d' : '#ffd0da') : 'rgba(255,140,165,.8)';
+    for (let x = FL + 1; x < FR - 1; x += game.danger ? 1 : 6) g.fillRect(x, game.loseY, 3, 1);
+    for (const b of game.bodies)
+      if (b.ot > 0.05)
+        drawArc(g, b.x, b.y, b.r + 2, Math.min(1, b.ot / 2), flashRed ? '#ff4d6d' : '#ffffff');
     for (const r of game.rays) drawRays(g, r);
     if (game.phase === 'play') {
       const cx = Math.round(clamp(game.carrierX, FL + 4, FR - 4));
@@ -421,27 +432,29 @@ export function createRenderBoard({
     }
     if (game.banner) {
       const T = renderSprites.SPR[game.banner.t],
-        S = T.width,
-        sc = S > 34 ? 34 / S : 1,
-        sd = Math.round(S * sc),
-        a = Math.min(1, game.banner.l * 3),
-        top = 60,
-        bh = sd + 30;
-      g.globalAlpha = a;
-      g.fillStyle = 'rgba(14,6,40,.84)';
-      g.fillRect(FL + 6, top, FR - FL - 12, bh);
+        sd = Math.min(T.width, 22),
+        a = Math.min(1, game.banner.l * 4),
+        top = 54,
+        bh = 26,
+        left = FL + 6,
+        width = FR - FL - 12;
+      g.globalAlpha = a * 0.9;
+      g.fillStyle = 'rgba(14,6,40,.9)';
+      g.fillRect(left, top, width, bh);
       g.fillStyle = '#ffcf3f';
-      g.fillRect(FL + 6, top, FR - FL - 12, 1);
-      g.fillRect(FL + 6, top + bh - 1, FR - FL - 12, 1);
-      renderText.drawText(g, 'NEW PAL!', W / 2, top + 5, '#ffe45c', 2);
-      g.drawImage(
-        T,
-        Math.round(W / 2 - sd / 2),
-        top + 19 + Math.round(Math.sin(game.elapsed * 8) * 1.5),
-        sd,
-        sd,
+      g.fillRect(left, top, width, 1);
+      g.fillRect(left, top + bh - 1, width, 1);
+      g.globalAlpha = a;
+      g.drawImage(T, left + 3, top + Math.round((bh - sd) / 2), sd, sd);
+      renderText.drawText(g, 'NEW PAL!', left + 3 + sd + 4 + 20, top + 5, '#ffe45c', 1);
+      renderText.drawText(
+        g,
+        TIERS[game.banner.t].n,
+        left + 3 + sd + 4 + renderText.textW(TIERS[game.banner.t].n, 1) / 2,
+        top + 15,
+        '#fff',
+        1,
       );
-      renderText.drawText(g, TIERS[game.banner.t].n, W / 2, top + 21 + sd, '#fff', 1);
       g.globalAlpha = 1;
     }
     if (game.phase === 'play' && !game.banner) {
@@ -454,15 +467,18 @@ export function createRenderBoard({
       if (hint) renderText.drawText(g, hint, W / 2, 56, '#fff', 1);
     }
     if (game.danger) {
-      const a = (0.18 + 0.14 * Math.sin(game.elapsed * 12)).toFixed(2);
-      g.fillStyle = 'rgba(255,40,80,' + a + ')';
-      g.fillRect(FL, FT, 3, FLOOR - FT);
-      g.fillRect(FR - 3, FT, 3, FLOOR - FT);
-      g.fillRect(FL, FT, FR - FL, 3);
+      if (((game.elapsed * 6) | 0) % 2) {
+        g.fillStyle = '#ff4d6d';
+        g.fillRect(FL, FT, 1, FLOOR - FT);
+        g.fillRect(FR - 1, FT, 1, FLOOR - FT);
+        g.fillRect(FL, FT, FR - FL, 1);
+      }
+      renderText.drawText(g, '!', FL + 6, game.loseY - 9, '#ff4d6d', 1);
+      renderText.drawText(g, '!', FR - 6, game.loseY - 9, '#ff4d6d', 1);
     }
     if (game.flashOpacity > 0) {
       g.fillStyle =
-        'rgba(255,255,255,' + Math.min(RM ? 0.2 : 0.6, game.flashOpacity).toFixed(2) + ')';
+        'rgba(255,255,255,' + Math.min(RM ? 0.12 : 0.35, game.flashOpacity).toFixed(2) + ')';
       g.fillRect(-4, -4, W + 8, H + 8);
     }
     g.restore();

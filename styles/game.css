@@ -278,7 +278,7 @@ body {
   display: flex;
   flex-direction: column;
   line-height: 1.08;
-  font-size: calc(var(--u) * 17);
+  font-size: max(8px, calc(var(--u) * 17));
 }
 .logo .a {
   color: #ff5f9e;
@@ -288,19 +288,19 @@ body {
 }
 .tag {
   margin: calc(var(--u) * 6) 0 0;
-  font-size: calc(var(--u) * 4.2);
+  font-size: max(8px, calc(var(--u) * 4.2));
   line-height: 1.9;
   color: #fff3dc;
 }
 .tap {
   margin: calc(var(--u) * 12) 0 0;
-  font-size: calc(var(--u) * 6);
+  font-size: max(8px, calc(var(--u) * 6));
   color: #fff;
   animation: blink 1s steps(2, jump-none) infinite;
 }
 .np {
   margin: calc(var(--u) * 7) 0 0;
-  font-size: calc(var(--u) * 3.6);
+  font-size: max(8px, calc(var(--u) * 3.6));
   color: #b9f5ff;
   line-height: 1.8;
 }
@@ -357,7 +357,7 @@ body {
   }
 }
 .panel .ttl {
-  font-size: calc(var(--u) * 6);
+  font-size: max(8px, calc(var(--u) * 6));
   color: var(--accent);
 }
 #goCv {
@@ -376,7 +376,7 @@ body {
   }
 }
 .reach {
-  font-size: calc(var(--u) * 3.4);
+  font-size: max(8px, calc(var(--u) * 3.4));
   color: var(--muted);
 }
 .reach b {
@@ -384,16 +384,16 @@ body {
   font-weight: normal;
 }
 .big {
-  font-size: calc(var(--u) * 9);
+  font-size: max(8px, calc(var(--u) * 9));
   line-height: 1;
 }
 .sub {
-  font-size: calc(var(--u) * 3.4);
+  font-size: max(8px, calc(var(--u) * 3.4));
   color: var(--muted);
   line-height: 1.6;
 }
 .newbest {
-  font-size: calc(var(--u) * 4);
+  font-size: max(8px, calc(var(--u) * 4));
   color: #b07a00;
   animation: blink 0.5s steps(2, jump-none) infinite;
 }
@@ -406,7 +406,7 @@ body {
 .lvlrow {
   display: flex;
   justify-content: space-between;
-  font-size: calc(var(--u) * 3.4);
+  font-size: max(8px, calc(var(--u) * 3.4));
 }
 .lvlrow span:last-child {
   color: var(--mint);
@@ -426,13 +426,13 @@ body {
   background: var(--mint);
 }
 #goUp {
-  font-size: calc(var(--u) * 4);
+  font-size: max(8px, calc(var(--u) * 4));
   color: var(--accent);
   animation: blink 0.4s steps(2, jump-none) infinite;
 }
 .panel .pbtn {
   width: 100%;
-  font-size: calc(var(--u) * 4);
+  font-size: max(8px, calc(var(--u) * 4));
   padding: calc(var(--u) * 3.4) 0;
 }
 #toast {
@@ -444,7 +444,7 @@ body {
   color: var(--ink);
   border: calc(var(--u) * 0.9) solid var(--edge);
   padding: calc(var(--u) * 2.4) calc(var(--u) * 3.2);
-  font-size: calc(var(--u) * 3.4);
+  font-size: max(8px, calc(var(--u) * 3.4));
   white-space: nowrap;
   opacity: 0;
   transition: opacity 0.2s;
@@ -650,7 +650,7 @@ body {
   display: flex;
   align-items: center;
   gap: calc(var(--u) * 3);
-  font-size: calc(var(--u) * 3.4);
+  font-size: max(8px, calc(var(--u) * 3.4));
   color: var(--accent);
   animation: blink 0.5s steps(2, jump-none) infinite;
 }
@@ -956,7 +956,7 @@ body::before {
   padding-top: calc(var(--u) * 18);
 }
 .logo {
-  font-size: calc(var(--u) * 19);
+  font-size: max(8px, calc(var(--u) * 19));
   letter-spacing: 0;
 }
 .logo .a {
@@ -966,18 +966,18 @@ body::before {
   color: var(--gold);
 }
 .tag {
-  font-size: calc(var(--u) * 3.6);
+  font-size: max(8px, calc(var(--u) * 3.6));
   line-height: 2.1;
   color: #fff0cf;
 }
 .tap {
-  font-size: calc(var(--u) * 4.8);
+  font-size: max(8px, calc(var(--u) * 4.8));
   color: var(--mint);
   margin-top: calc(var(--u) * 9);
   animation: blink 1.2s steps(2, end) infinite;
 }
 .np {
-  font-size: calc(var(--u) * 2.6);
+  font-size: max(8px, calc(var(--u) * 2.6));
   color: #ded0ef;
   line-height: 2.1;
 }
@@ -1765,5 +1765,140 @@ html {
   #bar .pbtn {
     min-height: 44px;
     height: 44px;
+  }
+}
+
+/* ===== Touch comfort pass: readable type, 44px targets, landscape and tablet layouts ===== */
+/* Press Start 2P is drawn on an 8px grid: below that its letters smear. Nothing is smaller. */
+.mix-control,
+.mix-control output,
+.mix-note,
+.credit,
+.live-title > span:not(.live-dot),
+.live-title small,
+#liveClock,
+#stemMeter span,
+.song-picker small,
+.engine-card small,
+.engine-badge,
+#goalTxt,
+#goalNum,
+.chain-label,
+.now-playing {
+  font-size: 8px;
+}
+.song-picker b,
+.engine-card b {
+  font-size: 9px;
+}
+.mix-note,
+.credit,
+.engine-card small,
+.song-picker small {
+  line-height: 1.9;
+}
+.panel .pbtn {
+  min-height: 44px;
+  padding: 0;
+  font-size: max(10px, calc(var(--u) * 4));
+}
+.panel {
+  gap: max(8px, calc(var(--u) * 2.6));
+}
+/* Sliders: a fat track a thumb can hit, and vertical swipes still scroll the sheet. */
+.mix-control {
+  min-height: 44px;
+}
+.mix-control input {
+  height: 28px;
+  min-height: 28px;
+  touch-action: pan-y;
+}
+.mix-control input::-webkit-slider-thumb {
+  width: 18px;
+  height: 22px;
+}
+.mix-control input::-moz-range-thumb {
+  width: 12px;
+  height: 16px;
+}
+/* The way out of a sheet is always on screen, however short the phone. */
+#radioClose,
+#bookClose {
+  position: sticky;
+  bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
+  min-height: 48px;
+  z-index: 2;
+}
+/* Pinch-zoom stays available outside the board; only the playfield itself must not scroll. */
+#app {
+  touch-action: manipulation;
+}
+#stage,
+#wrap {
+  touch-action: none;
+}
+/* Phones held sideways: the board takes the left, the controls stack on the right. */
+@media (orientation: landscape) and (max-height: 520px) {
+  #app {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 190px;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    gap: 6px 10px;
+    width: 100%;
+    max-width: none;
+    height: 100vh;
+    height: 100dvh;
+    padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
+      max(6px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+    border: 0;
+  }
+  .masthead,
+  #liveStrip,
+  #stemMeter,
+  .chain-label,
+  .now-playing {
+    display: none;
+  }
+  #stage {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    min-height: 0;
+  }
+  #hud {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  #goal {
+    grid-column: 2;
+    grid-row: 2;
+    display: flex;
+  }
+  #ladder {
+    grid-column: 2;
+    grid-row: 3;
+    flex-wrap: wrap;
+    align-content: center;
+    height: auto;
+  }
+  #bar {
+    grid-column: 2;
+    grid-row: 4;
+  }
+  #bar .pbtn {
+    min-height: 44px;
+    height: 44px;
+  }
+}
+/* Tablets held upright: use the height instead of a 470px column. */
+@media (min-width: 700px) and (orientation: portrait) and (min-height: 900px) {
+  #app {
+    max-width: min(100vw, calc(100dvh * 0.64));
+  }
+}
+/* The pixel editor needs a mouse; on a touch screen it only gets in the way. */
+@media (pointer: coarse) {
+  #labBtn {
+    display: none;
   }
 }
