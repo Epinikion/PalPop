@@ -15,7 +15,7 @@
     <title>Pal Pop — Live Music Arcade</title>
     <meta
       name="description"
-      content="Drop, merge, and evolve your pixel pals in a mobile-first neon arcade with evolving electro, festival house, trance, vocal house and two techno soundtracks."
+      content="Drop, merge, and evolve your pixel pals in a mobile-first neon arcade with four endless, generated soundtracks: hard techno, euphoric trance, melodic techno and rave anthems."
     />
     <!-- Press Start 2P: assets/fonts/OFL.txt -->
     <link rel="stylesheet" href="styles/game.css" />
@@ -27,10 +27,8 @@
       <canvas id="cabinetPal" width="128" height="128" aria-hidden="true"></canvas>
       <div class="pixel-rule"></div>
       <p>DROP. MERGE. EVOLVE.<br />REACH THE SUN!</p>
-      <p class="live-tip">FESTIVAL. TRANCE. TECHNO. VOCALS.<br />FIND YOUR GROOVE.</p>
-      <p class="tiny">
-        PIANO HOOKS, SUNG MELODIES, SYNTHS AND ACID.<br />YOUR SOUNDTRACK KEEPS EVOLVING.
-      </p>
+      <p class="live-tip">TRANCE. TECHNO. RAVE. ENDLESS.<br />FIND YOUR GROOVE.</p>
+      <p class="tiny">FOUR ENDLESS SONGS, COMPOSED AS YOU PLAY.<br />THEY NEVER REPEAT.</p>
     </aside>
     <aside class="side-note right" aria-label="How to play">
       <div class="eyebrow">HOW TO PLAY</div>
@@ -41,7 +39,7 @@
       <div class="key-row"><span>SWAP</span><kbd>S</kbd></div>
       <div class="key-row"><span>SOUND</span><kbd>M</kbd></div>
       <div class="pixel-rule"></div>
-      <p class="live-tip">SEVEN SOUNDTRACKS.<br />CHOOSE YOUR GROOVE.</p>
+      <p class="live-tip">FOUR SOUNDTRACKS.<br />CHOOSE YOUR GROOVE.</p>
       <p class="tiny">PICK YOUR SONG IN SOUND.<br />THE MUSIC FLOWS BETWEEN GAMES.</p>
     </aside>
     <div id="app">
@@ -96,7 +94,7 @@
             <p class="tag ol">MERGE TWO PALS<br />EVOLVE THEM ALL<br />REACH THE SUN</p>
             <p class="tap ol">TAP TO PLAY</p>
             <p class="np ol">
-              <span id="tLvl">LV 1 ROOKIE</span><br /><span id="tNp">NEON CIRCUIT</span>
+              <span id="tLvl">LV 1 ROOKIE</span><br /><span id="tNp">SOLAR RUSH</span>
             </p>
             <button id="dailyBtn" class="pbtn daily">DAILY</button>
             <p class="np ol" id="tDaily"></p>
@@ -150,7 +148,7 @@
       </div>
       <div class="now-playing">
         <span class="mini-eq" aria-hidden="true"><i></i><i></i><i></i></span
-        ><span id="trackLabel">NEON CIRCUIT</span><span id="tempoLabel">130 BPM</span>
+        ><span id="trackLabel">SOLAR RUSH</span><span id="tempoLabel">156 BPM</span>
       </div>
     </div>
     <div id="book" hidden>
@@ -171,7 +169,7 @@
         <div class="engine-card" aria-label="Live soundtrack information">
           <div class="engine-badge">LIVE</div>
           <div>
-            <b id="engineName">NEON CIRCUIT</b
+            <b id="engineName">SOLAR RUSH</b
             ><small id="engineInfo">ONE EVOLVING, ENDLESS SET</small>
           </div>
         </div>
@@ -206,7 +204,7 @@
         </div>
         <p class="credit" id="viewInfo"></p>
         <p class="credit">
-          ALL SEVEN SONGS ARE PLAYED LIVE AND KEEP EVOLVING. YOUR SONG CHOICE IS SAVED. RETRY
+          ALL FOUR SONGS ARE COMPOSED LIVE AND NEVER REPEAT. YOUR SONG CHOICE IS SAVED. RETRY
           WITHOUT LOSING THE BEAT.
         </p>
         <button id="radioClose" class="pbtn primary">BACK TO GAME</button>

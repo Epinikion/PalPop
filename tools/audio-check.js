@@ -1,4 +1,4 @@
-import { TRACKS, TRACK_IDS, FESTIVAL } from '../src/audio/catalog.js';
+import { TRACKS, TRACK_IDS, SOLAR } from '../src/audio/catalog.js';
 import { renderOffline, encodeWav } from './audio-render.js';
 const button = document.querySelector('#run'),
   result = document.querySelector('#result'),
@@ -9,7 +9,7 @@ for (const id of TRACK_IDS) {
   option.textContent = TRACKS[id].name;
   previewTrack.append(option);
 }
-previewTrack.value = TRACKS[FESTIVAL].style;
+previewTrack.value = TRACKS[SOLAR].style;
 async function render(style, bar, bars = 4, preview = false, { seed = 42, gameplay = false } = {}) {
   // Previews are rendered at 44.1 kHz so the top octaves can be judged; checks stay fast.
   const rendered = await renderOffline(style, bar, bars, {
@@ -40,11 +40,11 @@ async function render(style, bar, bars = 4, preview = false, { seed = 42, gamepl
 document.querySelector('#preview').addEventListener('click', async (event) => {
   event.target.disabled = true;
   const style = previewTrack.value;
-  result.textContent = 'Rendering evolving ' + style + '…';
+  result.textContent = 'Rendering a generated ' + style + '…';
   try {
     result.textContent =
-      (await render(style, 0, style === 'festival' ? 48 : 32, true)) +
-      '\nPreview ready: an evolving theme, builds and drops.';
+      (await render(style, 0, 32, true)) +
+      '\nPreview ready: a generated song with builds and drops.';
   } catch (error) {
     result.textContent = 'FAIL: ' + error.message;
   } finally {
@@ -56,7 +56,7 @@ document.querySelector('#gameplay').addEventListener('click', async (event) => {
   result.textContent = 'Rendering music and gameplay feedback…';
   try {
     const style = previewTrack.value;
-    result.textContent = await render(style, 0, style === 'festival' ? 48 : 32, true, {
+    result.textContent = await render(style, 0, 32, true, {
       gameplay: true,
     });
     result.textContent +=
@@ -78,7 +78,7 @@ button.addEventListener('click', async () => {
         lines.push(await render(style, bar));
         result.textContent = lines.join('\n');
       }
-    for (const style of ['dance', 'festival'])
+    for (const style of styles)
       for (const seed of [7, 123456789]) lines.push(await render(style, 16, 8, false, { seed }));
     for (const style of styles) lines.push(await render(style, 16, 16, false, { gameplay: true }));
     result.textContent = lines.join('\n');

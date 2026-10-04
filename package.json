@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "A modular, dependency-free browser game with evolving electro, festival house and techno soundtracks.",
+  "description": "A modular, dependency-free browser game with four endless, generated electronic soundtracks.",
   "scripts": {
     "start": "node tools/serve.mjs",
     "test": "node --test",

@@ -18,7 +18,7 @@ function driveCurve(drive) {
 }
 
 /**
- * Detuned-saw stack behind the festival hook, the electro stabs and the plucks. Flat-tuned voices
+ * Detuned-saw stack behind the lead, the stabs, the arpeggios and the plucks. Flat-tuned voices
  * go left, sharp ones right and the centre voice stays put, so the stack is wide but still folds
  * down to a solid mono sum. All oscillators stop together, so one cleanup releases the whole voice.
  */
@@ -29,7 +29,7 @@ export function createSupersaw({ audio, audioGraph, audioMath }) {
    * @param {number} v overall level
    * @param {object} [o] voices (3/5/7), detune scale, width, hp, cut [start, end], fall, q,
    *   attack, sustain, release, delaySend, reverbSend, pan, pulse (square centre voice),
-   *   drive (saturation after the filter, 0 for none) and drift (random cents each voice is
+   *   from (a MIDI note to glide from, over `glide` seconds), drive (saturation after the filter, 0 for none) and drift (random cents each voice is
    *   off by, so no two notes are the same stack)
    */
   function superSaw(t, notes, d, v, o = {}) {
@@ -50,6 +50,8 @@ export function createSupersaw({ audio, audioGraph, audioMath }) {
       pulse = false,
       drive = 0,
       drift = 0,
+      from = 0,
+      glide = 0.06,
     } = o;
     const offsets = LAYOUTS[voices] || LAYOUTS[7],
       end = t + d + release + 0.04,
@@ -90,7 +92,11 @@ export function createSupersaw({ audio, audioGraph, audioMath }) {
       for (const cents of offsets) {
         const oscillator = audio.context.createOscillator();
         oscillator.type = pulse && cents === 0 ? 'square' : 'sawtooth';
-        oscillator.frequency.value = audioMath.midi(note);
+        if (from && from !== note) {
+          // A glide from the previous note: the voices slide into place instead of jumping.
+          oscillator.frequency.setValueAtTime(audioMath.midi(from), t);
+          oscillator.frequency.exponentialRampToValueAtTime(audioMath.midi(note), t + glide);
+        } else oscillator.frequency.value = audioMath.midi(note);
         oscillator.detune.value =
           cents * detune +
           (drift ? (audioMath.hashRand(Math.round(t * 1000) + voice++, 91) - 0.5) * 2 * drift : 0);
@@ -109,8 +115,8 @@ export function createSupersaw({ audio, audioGraph, audioMath }) {
       // Saturation after the filter turns the swept saws into the dense, buzzing sound of an analog synth.
       const shaper = audio.context.createWaveShaper();
       shaper.curve = driveCurve(drive);
-      // No oversampling: the filter just before it has already removed what would fold back.
-      shaper.oversample = 'none';
+      // Oversampled: the saturation makes harmonics of harmonics, which would fold back as a glassy hiss.
+      shaper.oversample = '2x';
       filter.connect(shaper);
       shaper.connect(gain);
       extra.push(shaper);

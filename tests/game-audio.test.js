@@ -101,7 +101,11 @@ test('musical cascade rewards take the strongest event, at most one per beat', (
     assert.equal(audio.pendingHits[0].combo, 7);
     scheduler.musicTick();
     assert.equal(events.length, 2);
-    if (TRACKS[id].style === 'festival') assert.equal(events[0].name, 'eFestivalPiano');
+    assert.equal(
+      events[0].name,
+      'eRave',
+      `${TRACKS[id].name}: the reply is a stab of its own sound`,
+    );
     const firstReply = events[0].args[0];
     reactions.reactToMerge(8, 4);
     audio.context.currentTime += 0.04;

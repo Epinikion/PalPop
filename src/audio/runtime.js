@@ -153,8 +153,7 @@ export function createAudioRuntime({
     audio.context = null;
     audio.playing = null;
   }
-  /* ==== procedural techno engine v4 ==== */
-  /* A session holds its key and tempo while seeded chapters renew the musical material and form.
-   Arrangement choices depend on (seed, step); gameplay adds temporary accents and energy. */
+  /* A session holds its key and tempo; every other musical choice depends on (seed, bar, layer),
+     and gameplay adds temporary accents and energy on top. */
   return { applyAudio, initAudio, destroy };
 }

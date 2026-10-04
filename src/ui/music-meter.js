@@ -1,8 +1,6 @@
 import { $ } from '../core/dom.js';
 import { TRACKS } from '../audio/catalog.js';
 export function createUiMusicMeter({ audio, uiInterface }) {
-  /* ==== end techno engine v4 ==== */
-
   /* ---- UI glue: only writes to the DOM when text actually changes ---- */
   const uiTxt = {};
   let stemEls = null;
@@ -18,22 +16,17 @@ export function createUiMusicMeter({ audio, uiInterface }) {
       return;
     const S = audio.session,
       section = audio.section,
-      bar = (audio.bar % 64) + 1,
+      bar = audio.bar + 1,
       muted = !audio.enabled || audio.volume === 0,
       key = S.kname + ' ' + S.mname;
     setTxt(
       '#liveMixState',
-      muted ? 'MUTED' : 'GENERATING \u00b7 ' + section + ' \u00b7 BAR ' + bar + '/64',
+      muted ? 'MUTED' : 'GENERATING \u00b7 ' + section + ' \u00b7 BAR ' + bar,
     );
     setTxt('#liveClock', S.bpm + ' BPM \u00b7 ' + key);
     setTxt(
       '#trackLabel',
-      (audio.enabled ? '' : 'PAUSED \u00b7 ') +
-        TRACKS[audio.trackId].name +
-        ' / ' +
-        section +
-        ' / SET ' +
-        (Math.floor(audio.bar / 64) + 1),
+      (audio.enabled ? '' : 'PAUSED \u00b7 ') + TRACKS[audio.trackId].name + ' / ' + section,
     );
     setTxt('#tempoLabel', S.bpm + ' BPM');
     if (!uiInterface.radio.hidden)
@@ -43,9 +36,7 @@ export function createUiMusicMeter({ audio, uiInterface }) {
           ' BPM \u00b7 ' +
           key +
           ' \u00b7 ' +
-          (muted
-            ? 'MUTED'
-            : 'SET ' + (Math.floor(audio.bar / 64) + 1) + ' / ' + section + ' BAR ' + bar + '/64'),
+          (muted ? 'MUTED' : section + ' \u00b7 BAR ' + bar),
       );
     if (!stemEls) stemEls = [...document.querySelectorAll('#stemMeter [data-stem]')];
     for (const el of stemEls)

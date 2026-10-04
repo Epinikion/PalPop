@@ -33,21 +33,9 @@ export function createAudioReactions({
       );
       audio.graph.gG.gain.setTargetAtTime(ended ? 0.78 : 1, t, ended ? 0.6 : 0.1);
     }
-    const mel =
-      audio.session.style === 'festival' ||
-      audio.session.style === 'vocal' ||
-      audio.session.style === 'indie' ||
-      audio.session.style === 'trance'
-        ? audio.dangerActive
-          ? 3500
-          : 9000 + Math.min(1, audio.hype) * 1500 + (audio.feverOn ? 500 : 0)
-        : audio.session.style === 'dance'
-          ? audio.dangerActive
-            ? 3200
-            : 8200 + Math.min(1, audio.hype) * 1500 + (audio.feverOn ? 800 : 0)
-          : audio.dangerActive
-            ? 1700
-            : Math.max(audio.feverOn || game.goldTime > 0 ? 14000 : 9500, 9500 + audio.hype * 5000);
+    const mel = audio.dangerActive
+      ? 3000
+      : 11000 + Math.min(1, audio.hype) * 3000 + (audio.feverOn || game.goldTime > 0 ? 1000 : 0);
     if (audio.graph.song.melTarget !== mel) {
       audio.graph.song.melTarget = mel;
       audio.graph.song.melLP.frequency.setTargetAtTime(mel, audio.context.currentTime, 0.15);
@@ -96,9 +84,6 @@ export function createAudioReactions({
     }
     return gameAudio?.play(kind, detail);
   }
-  /* ==== end techno engine v4 ==== */
-
-  /* ---- UI glue: only writes to the DOM when text actually changes ---- */
   return {
     musicReact,
     resetLiveMusic,

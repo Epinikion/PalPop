@@ -1,16 +1,13 @@
 # Pal Pop
 
-A pixel-art merge game with slippery physics, responsive electronic gameplay sounds and seven continuously evolving Web Audio soundtracks:
+A pixel-art merge game with slippery physics, responsive electronic gameplay sounds and four endless Web Audio soundtracks. Every song is composed while it plays and never loops: tempo, key, scale, chords, bass lines, arpeggios, drum patterns, melodies and the order of intros, builds, drops and breakdowns are drawn from a seed, so no two sessions are the same and no stretch of a session comes back.
 
-- **NEON CIRCUIT** — pumping electro with sidechained bass, supersaw stabs and plucked arpeggios.
-- **LIVE TECHNO** — rolling bass, acid lines and dub chords.
-- **WAREHOUSE** — dark, drum-led techno: a hard kick, rolling rumble, hats and claps rendered like samples, percussion that drifts against the beat, and almost no synth.
-- **GOLDEN HOUR** — melodic vocal house: warm, wordless sung melodies over piano, plucks and a soft four-on-the-floor, with verses, builds, sing-along choruses and a bridge.
-- **HORIZON LINE** — bright, wide trance at 138–144 BPM: a bass that rolls into every kick, hats on every sixteenth, a wall of supersaws with a sixteenth arpeggio, long builds and short breakdowns. Voiced from a measurement of a Tomorrowland live set (see _Reference_).
-- **OPEN ROAD** — warm indie dance at 122–124 BPM in E major: a straight kick that pumps the whole mix, a round bass that plays only between the kicks, dotted electric-piano chords and a sung hook, with long grooves and one real breakdown. Voiced from a measurement of a vocal indie-dance record (see _Reference_).
-- **SKYLINE RUSH** — melodic festival house: piano, a seven-voice supersaw hook, DJ-style builds, silent beats before the drops and a piano breakdown that replays the theme.
+- **SOLAR RUSH** — euphoric hard trance at 150–158 BPM in a major key: a raw kick, a bass that rolls through every sixteenth, arpeggios that never stop, a big seven-saw lead, long builds and breakdowns. Voiced from a measurement of a 156 BPM clip (see _Reference_).
+- **BLACKOUT** — hard techno at 142–148 BPM in a minor, Phrygian or harmonic-minor key: a distorted kick, a rolling bass, wide rave stabs and heavy percussion. Voiced from a measurement of a 144 BPM clip.
+- **AFTER HOURS** — melodic techno at 122–128 BPM: a round kick, a moving bass, plucked arpeggios, wide pads and long melodies that turn over slowly. Voiced from a measurement of a melodic techno mix.
+- **RAVE ANTHEM** — a classic dancefloor anthem at 134–138 BPM: a bright synth riff over a straight kick, big builds with snare rolls and drops. Voiced from a measurement of a 136 BPM Eurodance record.
 
-All seven are mixed and mastered like records: about -8 LUFS at the default volume (as loud as the records they are voiced after), glued by bus and master compression, saturated by a parallel exciter, with a wide synth bus, sidechain pumping and a high-pass sweep through intros and builds.
+All four are mixed and mastered to the loudness of the records they are voiced after (about -8.5 to -11 LUFS at the default volume, peaks below -0.5 dBFS), glued by bus and master compression, with a wide synth bus, sidechain pumping and a high-pass sweep through intros and builds. The top of the mix is not boosted by an exciter or a strong EQ: it comes from the voices themselves.
 
 The game is written as native ES modules. Physics, game rules, rendering, interface, composition, arrangement and instrument synthesis are separate modules. There is no bundler and no runtime dependency.
 
@@ -42,32 +39,32 @@ For another port, set `PORT` before starting. To play from another device on the
 
 ## Where to change things
 
-| Change                                                       | File / folder                                                        |
-| ------------------------------------------------------------ | -------------------------------------------------------------------- |
-| Friction, gravity, bounces, merge tolerance, fixed timestep  | `src/settings.js` → `PHYSICS`                                        |
-| Drop speed, cooldown, combo timing                           | `src/settings.js` → `GAMEPLAY`                                       |
-| Pal names, sizes, palettes, score values, unlock thresholds  | `src/config.js`                                                      |
-| Collision and settling rules                                 | `src/game/physics.js`                                                |
-| Drops, swaps, scoring, merges, retries, game over            | `src/game/actions.js`                                                |
-| Special-pal behavior                                         | `src/game/specials.js`                                               |
-| Goals (the strip above the board)                            | `src/game/progression.js`                                            |
-| Run records, quests, the daily challenge                     | `src/game/records.js`                                                |
-| Mutators and badges                                          | `src/game/mutators.js`, `src/game/badges.js`                         |
-| Visual springs, blinking, trails                             | `src/game/animation.js`                                              |
-| Song names, descriptions, picker buttons                     | `src/audio/catalog.js`                                               |
-| Melody, key, progressions, chapter renewal                   | `src/audio/songs/`                                                   |
-| When instruments play in each section, and their `LEVEL`s    | `src/audio/dance.js`, `src/audio/festival.js`, `src/audio/techno.js` |
-| How each instrument sounds                                   | `src/audio/instruments/`                                             |
-| Supersaw voices (hook, stabs, plucks)                        | `src/audio/instruments/supersaw.js`                                  |
-| Mix bus, EQ, glue, stereo widener, delay, reverb, cleanup    | `src/audio/graph.js`                                                 |
-| Loudness: makeup gain, master compressor, soft clip, limiter | `src/audio/output.js`, per-song `trim` in `src/audio/catalog.js`     |
-| DJ filter through intros and builds                          | `src/audio/sweep.js`                                                 |
-| Lookahead timing and background scheduling                   | `src/audio/scheduler.js`                                             |
-| Musical reactions to gameplay                                | `src/audio/reactions.js`                                             |
-| Board drawing, sprites, backgrounds, pixel text              | `src/render/`                                                        |
-| Dialogs, collection, layout, buttons                         | `src/ui/interface.js`                                                |
-| Keyboard and pointer controls                                | `src/ui/input.js`                                                    |
-| Styling and responsive layout                                | `styles/game.css`                                                    |
+| Change                                                       | File / folder                                                    |
+| ------------------------------------------------------------ | ---------------------------------------------------------------- |
+| Friction, gravity, bounces, merge tolerance, fixed timestep  | `src/settings.js` → `PHYSICS`                                    |
+| Drop speed, cooldown, combo timing                           | `src/settings.js` → `GAMEPLAY`                                   |
+| Pal names, sizes, palettes, score values, unlock thresholds  | `src/config.js`                                                  |
+| Collision and settling rules                                 | `src/game/physics.js`                                            |
+| Drops, swaps, scoring, merges, retries, game over            | `src/game/actions.js`                                            |
+| Special-pal behavior                                         | `src/game/specials.js`                                           |
+| Goals (the strip above the board)                            | `src/game/progression.js`                                        |
+| Run records, quests, the daily challenge                     | `src/game/records.js`                                            |
+| Mutators and badges                                          | `src/game/mutators.js`, `src/game/badges.js`                     |
+| Visual springs, blinking, trails                             | `src/game/animation.js`                                          |
+| Song names, descriptions, picker buttons                     | `src/audio/catalog.js`                                           |
+| A song's tempo, key, chords, form, layers and mix            | `src/audio/gen/profiles.js`                                      |
+| How a song is generated and played                           | `src/audio/gen/` (`harmony`, `form`, `layers`, `engine`)         |
+| How each instrument sounds                                   | `src/audio/instruments/`                                         |
+| Supersaw voices (hook, stabs, plucks)                        | `src/audio/instruments/supersaw.js`                              |
+| Mix bus, EQ, glue, stereo widener, delay, reverb, cleanup    | `src/audio/graph.js`                                             |
+| Loudness: makeup gain, master compressor, soft clip, limiter | `src/audio/output.js`, per-song `trim` in `src/audio/catalog.js` |
+| DJ filter through intros and builds                          | `src/audio/sweep.js`                                             |
+| Lookahead timing and background scheduling                   | `src/audio/scheduler.js`                                         |
+| Musical reactions to gameplay                                | `src/audio/reactions.js`                                         |
+| Board drawing, sprites, backgrounds, pixel text              | `src/render/`                                                    |
+| Dialogs, collection, layout, buttons                         | `src/ui/interface.js`                                            |
+| Keyboard and pointer controls                                | `src/ui/input.js`                                                |
+| Styling and responsive layout                                | `styles/game.css`                                                |
 
 `src/main.js` is the composition root. It creates the state and wires the controllers together. Every factory receives its dependencies explicitly. A few gameplay controllers call each other, so the root creates stable controller objects before assigning their implementations. Callbacks run only after assembly. ES module imports remain acyclic.
 
@@ -101,75 +98,76 @@ Pal fields used in the renderer and solver are documented in `src/game/types.js`
 
 ## Add or change a song
 
-For another variation of an existing style, add an entry to `TRACKS` in `src/audio/catalog.js` using a new numeric ID, a unique `buttonId`, a name, label, description, BPM, and existing `style`. The picker and stored-choice validation discover it automatically.
+Every song is a **profile** in `src/audio/gen/profiles.js`; the four songs share one generator. A profile is plain data:
 
-For a new musical style:
+- `bpm`, `keys`, `scales` (weighted) and `swing`: what a session may draw once, from its seed;
+- `harmony`: the chord graph (`moves`), chord-loop shapes (`loops`), how often a phrase repeats the last one (`keep`), changes one chord (`tweak`) or starts a new walk, and the weighted chord colours (`qualities`: triads, suspended, ninths);
+- `form`: the segments (`INTRO`, `GROOVE`, `BUILD`, `DROP`, `BREAK`), their lengths and energies, and which segment may follow which;
+- `layers`: per layer (kick, bass, hats, open hat, clap, percussion, snare, stab, arp, acid, lead, pad) a sixteen-step probability row (`row('X...x...o...,...')`: `X` always, `x` 85 %, `o` 55 %, `c` 35 %, `,` 18 %, `.` never), the notes it may draw, its range and in which segments it plays (`on(intro, groove, build, drop, break)`);
+- `sound`: the kick variant and tuning, how hard the kick ducks, and which voice preset the stabs, arpeggios and lead use;
+- `mix`: the level of every layer. Change it here, not in the shared voices, so one song's balance never shifts another's.
 
-1. Add a pure composer under `src/audio/songs/`. It should return the same session shape as the dance composer: style, mode/scale, key, BPM, seconds per beat (`spb`), seconds per sixteenth (`s16`), swing, progressions, and pentatonic notes. Include any additional phrase data your arrangement uses.
-2. Write a chapter renewal function. Keep the session's tempo/key and supply a 64-bar `form` array of `[exclusiveEndBar, sectionName]` pairs.
-3. Add an arrangement factory, following `src/audio/dance.js`. Return a function accepting `(absoluteSixteenthStep, audioTime)`; schedule voices on Web Audio's clock.
-4. Register `compose`, `renewChapter`, `introForm`, and `createArrangement` under the style name in `src/audio/song-registry.js`, then add its catalog entry.
+To add a song of an existing kind, copy a profile under a new id, add it to `PROFILE_IDS`, and add an entry to `TRACKS` in `src/audio/catalog.js` with a new numeric ID, a unique `buttonId`, a name, label, description, BPM and the profile id as `style`. The picker and stored-choice validation discover it automatically. A new voice preset goes into `src/audio/instruments/gen.js`.
 
-The scheduler dispatches through the registry. The chapter cache retains at most three chapters; compositions renew indefinitely. Electro dance develops an A / A variation / B / A reply theme across four eight-bar phrases, then renews the theme. Rhythm, timbre and harmony evolve on different schedules, with a four-phrase cache. It uses minor/Dorian harmony, short saw/pulse leads, stereo synth stabs, and sidechain bass. `resetLiveMusic()` resets gameplay accents without restarting the soundtrack. Music reactions in `src/audio/reactions.js` can be adapted for a new style.
+### How a song is generated
 
-SKYLINE RUSH (`FESTIVAL`, ID 7) is melodic festival house at 126–128 BPM. Its major scale and relative-minor progressions hold each chord for two bars. Piano and an original saw hook answer each other, with the first drop after eight bars. PEAK plays A / varied A and FINAL plays B / exact A reprise; each chapter renews the theme from multiple contours and rhythm families. Breaks and builds omit the lead. Its dedicated piano/saw instruments, gameplay piano replies and brightness limits are isolated from the other two tracks. Keep the four-phrase and three-chapter caches bounded.
+Everything is a pure function of `(seed, bar, layer)` (`src/audio/gen/random.js` hashes the coordinates), so any bar can be computed at any time, a session can be replayed exactly, and a test can walk a whole song.
 
-GOLDEN HOUR (`VOCAL`, ID 8) is melodic vocal house at 120–124 BPM in a minor or major key. Its form is a real song: intro, verse, pre-chorus build, chorus, bridge, second build, final chorus and outro, in 64-bar chapters whose later forms rotate (one opens on the chorus). One chord per bar over four-chord loops; the intro and outro share the chorus chords because they tease its hook. `src/audio/songs/vocal-composition.js` writes the sung lines: the lead stays between G3 and E5 so it never turns shrill, held notes on strong beats are chord tones, passing notes move by step, leaps are rare, verses leave whole bars empty, and the chorus hook returns unchanged in both of its phrases and in every chorus (only the cadence changes, and the final chorus lifts its last note). `src/audio/vocal.js` arranges it: a lead, a doubled take, a tenor an octave below and a third above in later choruses, an "ooh" choir in the bridge, and an instrumental part that reuses the festival piano, saw plucks and supersaw chords. Vocals drop out while the game is in danger, and the bar before a chorus goes silent on its last beat.
+- **Harmony** (`harmony.js`). Chords come in phrases of four (eight in AFTER HOURS) bars. Each phrase repeats the previous one, changes a single chord, or starts a new walk over the chord graph; the voicing glides from chord to chord; the colour drifts every three phrases.
+- **Form** (`form.js`). The song is an endless chain of segments drawn from the profile's graph, with lengths and energies drawn from its ranges. A build always lands in a drop, the same section never comes three times running, and inside a segment single layers switch on and off from phrase to phrase.
+- **Layers** (`layers.js`). Each layer has a pattern that is redrawn a little every phrase: a few steps are drawn again from the template, the rest stay, so a groove keeps its character yet is never the same two phrases running. Bass lines, arpeggios and stabs draw their notes from the current chord; the lead plays two-bar motifs that answer and rest. Every sixteen phrases everything is drawn fresh, which is not heard (a pattern that has been redrawn that often is a new one anyway) and keeps memory and work bounded: a session of any length holds about a hundred small items.
+- **Engine** (`engine.js`). The scheduler calls it once per sixteenth; it reads the bar's plan and plays the voices. Builds close the DJ filter, add a riser and a quickening kick and snare roll, leave the last beat silent in many cases and swell into a reverse cymbal; drops land with a crash and an impact; breakdowns open the reverb.
 
-The voice (`src/audio/instruments/vocal.js`) is synthesized, not recorded: a smooth harmonic source passes four parallel vowel formants (alto and tenor tables), with a late-arriving vibrato of about 5 Hz and 25 cents, slow pitch drift, a breath that is strongest at the start of a note, a soft attack, scoops into phrases and fall-offs at their ends, legato glides between joined notes and a loudness normalisation so every vowel and pitch sits at the same level. It sings wordless syllables ("ooh", "ah", "oh", "la", "na", hums), because real words need recordings. Lead and backing vocals share their own bus with a low cut, a boxy-range dip, a presence lift, a de-esser, a soft top and a compressor, and the kick ducks that bus only about a third as much as the synths.
+`tests/music.test.js` checks the properties that matter: the same seed gives the same song in any order of asking, no sixteen-bar stretch comes back within 512 bars (for every song and three seeds), the harmony keeps moving, every note is in the key and in range, forms are valid, and the memory stays bounded over 6,000 bars.
+
+The scheduler dispatches through the registry (`src/audio/song-registry.js`). `resetLiveMusic()` resets gameplay accents without restarting the soundtrack; gameplay hits answer with a stab of the song's own sound on the next beat (`eRave`). Music reactions in `src/audio/reactions.js` close the synth filter while the game is in danger.
 
 ### Drum kit
 
 Every track plays its drums from one kit (`src/audio/instruments/kit-dsp.js`, played by `kit.js`), so none of them sounds like oscillators and filtered noise. The kit is rendered sample by sample in plain JavaScript: three kicks (a saturated pitch-dropping sine fused with a short knock and a click, retuned to the key), three claps with early reflections, rimshots, six-square metal hats and open hats, ride, crash (long and short), toms, tuned metal hits, industrial blasts, snares and shakers. Each drum is built the first time it is needed (a few milliseconds), the rest are warmed up in timer ticks, and every hit picks one of several variants, so repeats never sound machined. A hit is one buffer source and one gain, which is cheaper than assembling a drum from oscillators and filters.
 
-The four older arrangements keep their vocabulary (`eKick`, `eHat`, `eClap`, `eSnare`, `eShaker`, `eRide`, `eTom`, `ePerc`, `eCrash`): `src/audio/instruments/drums.js` maps each one onto the kit and holds its loudness at what the arrangement was balanced with (the `GAIN` table), so the `LEVEL` tables still mean what they did. Kicks are tuned to the key, between 46 and 62 Hz (`kickTuning`): the root where it lies there, otherwise the fifth (the fourth for F). NEON CIRCUIT uses the punch kick, LIVE TECHNO the long one, SKYLINE RUSH and GOLDEN HOUR the thud, with the punch kick in drops and choruses.
-
-### WAREHOUSE
-
-WAREHOUSE (`WAREHOUSE`, ID 9) is dark techno at 132–138 BPM, built the way techno records are: around the drums. Its kit is the one above, played directly through the `eKit*` voices. The rumble is a low tail swelling between the kicks, cut into a pulse by the kick's sidechain; the bass is a saturated reese; the room is slow filtered noise. `src/audio/songs/warehouse-composition.js` draws a chapter's rhythm material once (hat velocity map, rim, a percussion cycle that is 10, 12 or 14 steps long and so drifts against the bar, metal hits, bass mask, stabs, ping melody) and the arrangement (`src/audio/warehouse.js`) adds, filters and removes layers around it: kick-only intro, groove, peak, a kick-less breakdown with pad and pings, a build with a quickening snare roll and a silent last beat, and the final peak.
-
-### HORIZON LINE
-
-HORIZON LINE (`TRANCE`, ID 10) is trance at 138–144 BPM in a major or minor key (about 60 % major). `src/audio/songs/trance-composition.js` draws a chapter's material once: a chord loop for each part of the song (two bars a chord), a sixteenth-note arpeggio over the triad, hat velocities and which beats the bass leaps an octave on. The arrangement (`src/audio/trance.js`) builds the rhythm section the measurements describe: a tuned clean kick (a fourth kit variant with almost nothing above the sub but the click), a bass that plays the three sixteenths after every kick and leans hardest into the next one (`eDanceBass`, notes held past their step so they overlap), closed hats on every sixteenth except the off-beat eighths, which are open. Over it sits the wall: a five-saw chord held for two bars (`eTranceChord`) and an arpeggio of overlapping saws (`eTranceArp`), with the festival hook (`eFestivalLead`) on top. The kick ducks the bass hard and the synths barely (`pump` 0.2 in the catalog), so the middle of the mix never opens up. Breakdowns are short and only about 3 dB quieter than drops: a held chord, broken-chord piano, the hook replayed on piano and the arpeggio coming back.
-
-### OPEN ROAD
-
-OPEN ROAD (`INDIE`, ID 11) is indie dance at 122–124 BPM, always in E major. `src/audio/songs/indie-composition.js` builds on the vocal composer (the same sung lines, ranges and hook rules as GOLDEN HOUR) with its own chord loops: C# minor, A, E and E or B, one chord a bar, the way the measured record turns. The forms are 64 bars with long grooves, one breakdown of 8 to 12 bars where the kick leaves and comes back, and a short outro. The arrangement (`src/audio/indie.js`) plays a straight kick tuned to G#1 (52 Hz, so the sub carries), claps on two and four, an open hat on every off-beat with closed hats and a shaker between, and a ride on the chorus off-beat so the top end stays continuous. The bass (`eWarmBass`, a sine with a soft second harmonic, saturated and low-passed) plays only on the off-beat sixteenths: root, root, fifth, fifth, with a step up at the end of each loop; the breakdown keeps one long note under the pads. The chords are an electric piano (`eRhodes`, phase modulation with a bright "tine" at the attack) in a dotted rhythm, played as two takes a few cents apart in either ear, over a held E pad (the pedal the record keeps coming back to). The voice sits further forward than in GOLDEN HOUR (`LEAD` in the arrangement), sharing its singer (`src/audio/singer.js`) with it. The kick ducks the bass bus and the synths take 0.8 of the dip (`pump`), a deeper pump than the other songs, because the record's mids swing by about 5 dB across a beat.
+The engine plays its drums through the kit's vocabulary (`eKick`, `eHat`, `eClap`, `eSnare`, `eShaker`, `eRide`, `eTom`, `ePerc`, `eCrash`): `src/audio/instruments/drums.js` maps each one onto the kit and holds its loudness at what the profiles were balanced with (the `GAIN` table). Kicks are tuned to the key, between 46 and 62 Hz (`kickTuning`): the root where it lies there, otherwise the fifth (the fourth for F), and a profile may shift that (`sound.tune`). There are six kick variants: three soft and punchy ones, a long one, a hard one for BLACKOUT (a 300 Hz drop and a hard saturation) and a raw one for SOLAR RUSH.
 
 ### Reference
 
-The mix and the trance track follow a measurement of a 62-minute live set (Armin van Buuren, Tomorrowland 2026, as a 56 kbps MP3, so nothing above about 11 kHz could be read). It was measured, not listened to, with the same analysis for every file (`tools/reference-report.mjs`). What the set showed, and what changed because of it:
+The songs are voiced from measurements of recordings, with one analysis for every file (`tools/reference-report.mjs`): tempo, the level while the kick plays, seven band levels (sub 30–60 Hz, kick 60–120, bass 120–250, low mids 250–500, mids 500–2k, high mids 2–5k, highs 5–10k), side/mid per band and the swing of each band across one beat. Measured, not listened to: the numbers say how loud, bright, wide and busy a record is, not how it sounds, and whether a result sounds good is for ears.
 
-- **Tempo.** Mostly 137–140 BPM, 144–145 in the last third; four-on-the-floor throughout. HORIZON LINE uses 138–144.
-- **Key.** No single key; the set moves through many, roughly 60 % major frames. Sessions pick a key and mode per song.
-- **Loudness.** -13.0 LUFS integrated, a loudness range of only 2.2 LU, and breakdowns about 3 dB under the drops. The soundtracks already sat at -13 LUFS; HORIZON LINE's breakdowns now follow the 3 dB figure.
-- **Tonal balance.** In the kick-driven passages the set carries 3–7 dB more energy between 500 Hz and 10 kHz than our tracks did, and a little less sub. The shared music bus now has +5 dB of presence (3.4 kHz) and +5 dB of air (7.5 kHz shelf, up from +1.5 and +2.5), the kick sits 1.5–3 dB lower in the arrangements, and the vocal bus gives most of the extra brightness back so GOLDEN HOUR's voice is unchanged (within 0.3 dB).
-- **Width.** The mids and highs are close to uncorrelated (side/mid about -2 dB between 500 Hz and 5 kHz). The synth bus's side signal is doubled (`SYNTH_WIDTH` 2); bass and kick stay centred.
-- **Pumping.** The mids swing by only 1.6 dB across a beat, far less than a hard sidechain gives. The kick still ducks the bass bus fully, but the synth bus now takes only a share of the dip (`pump` per track in `src/audio/catalog.js`: 0.2 to 0.6, 1 for WAREHOUSE).
-- **Rhythm.** The bass leans into the next kick; hats are continuous sixteenths; the mids stay nearly flat across a beat. That is what HORIZON LINE's arrangement does.
+| Song        | Reference                                          | What it showed                                                                                                                                                 |
+| ----------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SOLAR RUSH  | a 156 BPM euphoric hard-trance clip in B/E major   | Kick, sub and a bass that sits low (A1 to A2) at about the same level; sixteenth arpeggios; mids 6–13 dB under the kick band; narrow below 500 Hz, wide above. |
+| BLACKOUT    | a 144 BPM hard-techno clip                         | A distorted, short kick; a rolling bass; dense mids and highs only 3–9 dB under the kick band.                                                                 |
+| AFTER HOURS | a melodic techno mix (126 BPM, A minor, -7.6 LUFS) | A round kick and a bass that carries 120–250 Hz; 2–5 kHz about 11 dB under the kick; layers of pads and plucks up to 6 kHz.                                    |
+| RAVE ANTHEM | an Alice Deejay record (136 BPM, -11.3 LUFS)       | A strong kick (10 dB over the bass band), a continuous riff and little above 5 kHz.                                                                            |
 
-OPEN ROAD was measured the same way on one indie-dance record (a 213 second AAC rip of a video): 123 BPM; E major with a four-bar loop of C# minor, A, E, E (E dominates every bar, so the harmony sits on an E pedal); 48 bars of groove, 20 bars without a kick, 28 bars of groove and 12 bars of outro, the breakdown about 7 dB quieter than the groove and much wider; a kick whose fundamental sits near 50 Hz and an off-beat bass (A2 and E2) between the kicks; about -11 LUFS. Next to the Armin set it has 4 to 7 dB more sub, bass and low mids, 4 dB less above 2 kHz, and swings 5 to 6 dB in the mids and highs across a beat. OPEN ROAD's render lands within about 3 dB of it in every band (sub 3 dB under, upper mids 3 dB under) at the same loudness; its mids are narrower (side/mid about -13 dB against -6 dB), and its bass band swings more (about 19 dB against 9 dB).
+The first version of the shared mix followed a 62-minute live set (-13 LUFS, peaks at -3 dBFS); the records above are 4 to 6 dB louder and denser, so the master was made louder (`MASTER_GAIN` 1.05, a harder soft clipper, a last rounding stage) and the voices were rebuilt as saturated, drifting saw stacks (`drive` and `drift` in `superSaw`). An earlier version also added a parallel exciter and +5 dB of presence and air at the end of the chain; it made the top end glassy, and it is gone. The voices' own saturation is oversampled, so the extra harmonics do not fold back as hiss.
 
-A second pair of records (Alice Deejay, _Better Off Alone_: 136 BPM, 175 s; and a melodic techno mix, _Tera Mera Pyaar_: 126 BPM in A minor, 267 s; both 320 kbit/s MP3s) showed what "sounds like a record" means in numbers, and where the songs fell short. Both are much louder than the live set: -11.5 and -7.8 LUFS with peaks at full scale, against -13 LUFS and peaks of -3 dBFS for the songs. The melodic techno mix carries 2 to 5 kHz about 13 dB above LIVE TECHNO and fills the whole spectrum up to 6 kHz with dense, saturated layers, where the songs had a heavy low end and thin single notes above it (the spectrograms show it at a glance). What changed: `MASTER_GAIN` 0.72 to 1.05 with a harder soft clipper (about -8.2 LUFS), the last rounding stage, the parallel exciter, and the techno family's melodic voices (stab, pad, pluck, lead) rebuilt as saturated, drifting saw stacks (`drive` and `drift` in `superSaw`). At the same loudness LIVE TECHNO now lies within 5 dB of the melodic techno mix in every band (sub 0.5 dB under, kick 0.6 over, bass 2.5 under, low mids 3.7 under, mids 2.3 under, upper mids 4.9 under, highs 1.5 over) and WAREHOUSE within 4.2 dB. Measured, not listened to: whether a song now sounds like one of those records is for ears.
+Where the renders land against the references (a drop, seed 42, bands relative to the kick band, in dB; reference first):
 
-Limits: this is one set seen through a low-bitrate MP3. The measurements say how bright, wide, loud and busy it is, not how it sounds; whether a result sounds good is for ears.
+| Song        | sub         | bass         | low mids      | mids          | high mids     | highs         | loudness  |
+| ----------- | ----------- | ------------ | ------------- | ------------- | ------------- | ------------- | --------- |
+| SOLAR RUSH  | -1.2 / -3.9 | -6.8 / -8.6  | -13.0 / -11.0 | -7.9 / -9.2   | -12.8 / -14.9 | -15.8 / -14.0 | -8.1 LUFS |
+| BLACKOUT    | -0.7 / -1.6 | -3.9 / -7.6  | -6.0 / -8.8   | -6.1 / -10.9  | -7.1 / -14.3  | -9.0 / -11.3  | -9.6 LUFS |
+| AFTER HOURS | -2.4 / -2.0 | -4.4 / -3.1  | -8.8 / -7.7   | -9.6 / -8.9   | -11.1 / -14.3 | -13.9 / -13.8 | -8.4 LUFS |
+| RAVE ANTHEM | -8.2 / -9.1 | -10.0 / -6.8 | -14.7 / -11.9 | -14.2 / -12.8 | -19.8 / -17.7 | -19.0 / -18.2 | -8.0 LUFS |
+
+BLACKOUT is still 4 to 7 dB too thin above 2 kHz compared with its reference, and its highs are narrower than the clip's (side/mid -12 dB against -5 dB); that is the largest known gap.
 
 ```sh
-node tools/reference-report.mjs preview.wav                 # compare any file with the reference
-node tools/reference-report.mjs set.mp3 --start 300 --seconds 600
+node tools/reference-report.mjs preview.wav                 # compare any file with the reference set
+node tools/reference-report.mjs record.mp3 --start 300 --seconds 60
 ```
 
-It prints tempo, the level while the kick plays, seven band levels next to the reference, side/mid per band and the swing of each band across one beat. Compare tracks of similar loudness.
+Compare passages of similar loudness, and render a window of a song the same way (`tools/audio-check.html` exports WAV previews).
 
 ### Mix and mastering
 
-Signal flow: voices feed the dry, bass and synth buses of the current song. The kick ducks the bass bus fully and the synth bus by the song's `pump` share (instant dip, exponential recovery). The synth bus passes a mid/side widener whose side signal is high-passed at 220 Hz, so bass and low mids stay centred and the mix still folds down cleanly to mono. Each song's output passes its loudness `trim` and the DJ high-pass, then the shared music bus: low cut, bass shelf, presence (+5 dB at 3.4 kHz) and air (+5 dB shelf at 7.5 kHz) EQ, soft saturation, a parallel exciter (the top of the mix, high-passed at 1.5 kHz, through a hard tanh clipper and low-passed at 5.8 kHz, blended back at 0.17) and a slow-attack glue compressor. The master adds makeup gain (`MASTER_GAIN`), a compressor, a tanh soft clipper, a limiter and a last stage that rounds anything above 0.9 off towards 0.98, so the output stays below -0.5 dBFS and never clips hard.
+Signal flow: voices feed the dry, bass and synth buses of the current song. The kick ducks the bass bus fully and the synth bus by the song's `pump` share (instant dip, exponential recovery). The synth bus passes a mid/side widener whose side signal is high-passed at 220 Hz, so bass and low mids stay centred and the mix still folds down cleanly to mono. Each song's output passes its loudness `trim` and the DJ high-pass, then the shared music bus: low cut, bass shelf, a gentle presence (+2 dB at 3.4 kHz) and air (+1.5 dB shelf at 8.5 kHz) lift, soft saturation and a slow-attack glue compressor. The master adds makeup gain (`MASTER_GAIN`), a compressor, a tanh soft clipper, a limiter and a last stage that rounds anything above 0.9 off towards 0.98, so the output stays below -0.5 dBFS and never clips hard.
 
 Dry gameplay effects bypass the music bus and enter at the master, scaled by `SFX_GAIN`. They were measured about 11 LU below the music with transient peaks close to the music's, before the master was made louder; that ratio was not measured again.
 
-Each arrangement keeps a `LEVEL` table with the balance of its voices (kick, bass, clap, hats, lead, chords or wall, piano, plucks). Change it there, not in the shared voices, so one track's balance never shifts another's. A track's overall level is its catalog `trim`; the shared makeup is `MASTER_GAIN`.
+Each profile keeps a `mix` table with the balance of its layers (kick, bass, hats, claps, percussion, stabs, arpeggio, lead, pad). Change it there, not in the shared voices, so one song's balance never shifts another's. A song's overall level is its catalog `trim`; the shared makeup is `MASTER_GAIN`.
 
-Arrangements follow live-set dramaturgy. Intros open a DJ high-pass filter over four-on-the-floor drums. Builds close the filter, add a riser, a plucked arpeggio, quickening chord stabs and a snare roll, swell into a reverse cymbal and leave the last beat silent. Drops land with a crash and an impact, and every eighth bar gets a crash or a snare fill. Breakdowns open the reverb (`eSpace`); in SKYLINE RUSH the piano replays the hook there. Every 64 bars, when the material renews, an impact and a swell hand the song over like a DJ mixing into the next track.
+Songs follow live-set dramaturgy. Intros open a DJ high-pass filter over the drums. Builds close the filter, add a riser, a quickening kick and snare roll, swell into a reverse cymbal and often leave the last beat silent. Drops land with a crash and an impact, and some phrase ends get a crash or a fill. Breakdowns open the reverb (`eSpace`) and keep the arpeggios and pads over a kick-less floor.
 
 `src/audio/game-feedback.js` owns dry gameplay effects. Call `audioReactions.reactToEvent(kind, detail)` from an accepted game action. Drop, swap, impact, merge, shake, goal, discovery, fever, danger, game over, and specials have short electronic cues. Impact pair memory is bounded and repeated contacts are throttled. Seven ordinary effects voices leave two additional slots for controls and one reserved for game over. Musical cascade replies coalesce into the strongest event, at most once per beat. Sound settings expose separate Music and Effects levels; Sound Off mutes both. `src/audio/output.js` provides the shared master chain for both live playback and audition.
 
@@ -218,25 +216,25 @@ npm run cache:update
 npm run verify
 ```
 
-The Node tests cover original physics trajectories at 30/60/120 FPS, overlap resolution, chain merges, stacks, shakes, injectable balance settings, the techno composition, evolving electro/festival phrases, 10,000 bounded phrase renewals, 2,000 renewed chapters, 24 chapters of all arrangements, audible festival A/B/reprise development, immediate gameplay feedback, impact throttling, essential cue capacity, coalesced musical rewards, mute/retry behavior, and save compatibility. Baselines in `tests/fixtures/` pin the techno composition and the physics trajectories; tests import the actual modules directly.
+The Node tests cover original physics trajectories at 30/60/120 FPS, overlap resolution, chain merges, stacks, shakes, injectable balance settings, the generated songs, immediate gameplay feedback, impact throttling, essential cue capacity, coalesced musical rewards, mute/retry behavior, and save compatibility. A baseline in `tests/fixtures/` pins the physics trajectories; tests import the actual modules directly.
 
-`tests/vocal.test.js` covers the vocal song: deterministic sessions and valid forms, singable parts (range, steps, chord tones on strong beats, rests, density), the returning hook, the voice's formants, vibrato and soft onset, cleanup and the arrangement's silences. `tests/warehouse.test.js` covers the techno track: the kit is deterministic, normalised and click-free, kicks have a 46 Hz fundamental, punch and a finite tail, hats are bright and claps sit in the mids, each hit is one cleaned-up voice, the kick retunes and ducks, and the arrangement keeps its floor, silent beat, drop and drifting percussion. `tests/mix.test.js` covers the mix: the master chain's bounds, a reachability check that every song-bus node ends in the output, per-song trims, the sweep curve, filter and silent-beat behaviour of all three arrangements, supersaw symmetry and cleanup, the drum voices' mapping onto the kit (kick variants and tuning, the rumble feed, toms, percussion, crashes), the kick's sidechain envelope and the WAV analyzer. `tests/trance.test.js` covers HORIZON LINE: deterministic, valid sessions (about 60 % major), chapters that keep key and tempo, the tuned clean kick and its silent beat before drops, a bass that rolls on every sixteenth after the kick and never on it, hats on every sixteenth, a gap-free arpeggio and chord wall, the drop and the breakdown, and the two new voices. The `mix` tests also cover the synth bus's pump share. `tests/rules.test.js` covers the game rules on the real modules without a browser: chain combos and their window, scoring and fever, limited swaps and their reward, the shake's cost, the squeeze, the fairer death rule and merge grace, Icy, the Sun victory, the drop-count ramp, identical daily pals and goals for every level, the wildcard and Solis rules, the missing bomb, and booking a run. `tests/records.test.js` covers stats, records, quests and the daily. `tests/indie.test.js` covers OPEN ROAD: deterministic E-major sessions at 122 to 124 BPM with valid loops (C# minor and A open the chorus loop), chapters that keep key and tempo, forms with one long breakdown, a straight kick that leaves with the breakdown, a bass that only plays between the kicks (root, root, fifth, fifth, one held note in the breakdown), claps on two and four, dotted chord stabs taken twice, a sung chorus, and one cleaned-up voice each for the electric piano and the bass. `tests/sound.test.js` covers the master's last rounding stage (nothing reaches 0.99, loud peaks are kept, the curve is odd and monotonic), the parallel exciter on every song's music bus, and the driven, drifting saw stacks behind the techno voices. `tests/polish.test.js` covers the coaching hints (order, learned for good, text width), the adaptive look-ahead, the home-indicator rule and the icon files in the manifest and the offline cache. `tests/mutators.test.js` covers the mutators' table, unlocks, offers and the daily mutator, and the badges' conditions, progress and one-time awards; `tests/rules.test.js` also checks what each mutator changes and that finishing a run pays badge XP.
+`tests/music.test.js` covers the generated songs: the catalog and registry, determinism whatever order bars are asked in, no sixteen-bar stretch repeating within 512 bars (every song, three seeds), moving harmony, patterns that change from phrase to phrase, valid forms (builds land in drops, no section three times running), notes in the key and in range, bounded memory over 6,000 bars, and 1,024 bars of every arrangement against recording instruments (finite, in-time events). `tests/mix.test.js` covers the mix: the master chain's bounds, a reachability check that every song-bus node ends in the output, per-song trims, the sweep curve, the filter and silent-beat behaviour of all four arrangements, supersaw symmetry and cleanup, the drum voices' mapping onto the kit (kick variants and tuning, the rumble feed, toms, percussion, crashes), the kick's sidechain envelope and the WAV analyzer. `tests/sound.test.js` covers the master's last rounding stage (nothing reaches 0.99, loud peaks are kept, the curve is odd and monotonic), a music bus without an exciter, and the driven, drifting saw stacks behind the voices. `tests/rules.test.js` covers the game rules on the real modules without a browser: chain combos and their window, scoring and fever, limited swaps and their reward, the shake's cost, the squeeze, the fairer death rule and merge grace, Icy, the Sun victory, the drop-count ramp, identical daily pals and goals for every level, the wildcard and Solis rules, the missing bomb, and booking a run. `tests/records.test.js` covers stats, records, quests and the daily. `tests/polish.test.js` covers the coaching hints (order, learned for good, text width), the adaptive look-ahead, the home-indicator rule and the icon files in the manifest and the offline cache. `tests/mutators.test.js` covers the mutators' table, unlocks, offers and the daily mutator, and the badges' conditions, progress and one-time awards; `tests/rules.test.js` also checks what each mutator changes and that finishing a run pays badge XP.
 
-For actual Web Audio rendering in a browser, open `tools/audio-check.html` and press **RUN AUDIO CHECKS**. It renders all songs at several sections, additional seeds, and busy gameplay through the live compressor/limiter and reactive filter. It checks finite samples, clipping, released voices, required cues, and freeze/recovery/death transitions. Choose a soundtrack and export music or music with gameplay feedback using the preview buttons. Festival previews span 48 bars, including intro, build, drop, break and another drop. Automated checks establish signal/runtime behavior; listening establishes musical taste.
+For actual Web Audio rendering in a browser, open `tools/audio-check.html` and press **RUN AUDIO CHECKS**. It renders all songs at several sections, additional seeds, and busy gameplay through the live compressor/limiter and reactive filter. It checks finite samples, clipping, released voices, required cues, and freeze/recovery/death transitions. Choose a soundtrack and export music or music with gameplay feedback using the preview buttons. Previews span 32 bars of a generated song. Automated checks establish signal/runtime behavior; listening establishes musical taste.
 
 ### Measuring a mix
 
 Download a preview from the audio check page (previews render at 44.1 kHz), then:
 
 ```sh
-node tools/analyze-wav.mjs skyline-rush.wav --bpm 127
-ffmpeg -i skyline-rush.wav -af ebur128=peak=true -f null -   # integrated loudness (LUFS) and true peak
+node tools/analyze-wav.mjs solar-rush.wav --bpm 156
+ffmpeg -i solar-rush.wav -af ebur128=peak=true -f null -   # integrated loudness (LUFS) and true peak
 ```
 
-`tools/reference-report.mjs` compares a file with the reference set (see _Reference_). `analyze-wav.mjs` prints, for every bar, RMS and peak in dBFS, the low-mid, high-mid and top-end balance relative to the 20-200 Hz band, and the side/mid ratio. The shipped mixes aim at:
+`tools/reference-report.mjs` compares a file with a reference (see _Reference_). `analyze-wav.mjs` prints, for every bar, RMS and peak in dBFS, the low-mid, high-mid and top-end balance relative to the 20-200 Hz band, and the side/mid ratio. The shipped mixes aim at:
 
-- about -7 to -9 LUFS integrated, peaks below -0.5 dBFS, drops about 4 dB louder than breakdowns;
-- in drops, relative to the low band (20-200 Hz): low mids about -8 dB, high mids about -12 dB, top end about -14 dB (brighter than before; the reference set is brighter still);
-- a side/mid ratio around -10 dB in SKYLINE RUSH's drops (a wide hook over a centred kick and bass); HORIZON LINE's mids sit near -2 dB, like the reference.
+- about -8 to -11 LUFS integrated, peaks below -0.5 dBFS;
+- in drops, the bands relative to the kick band close to the reference table above;
+- synth mids and highs that are wide (side/mid between -5 and -2 dB) over a centred kick and bass.
 
-After changing voices or levels, render the previews again and compare. Set the master first, then each track's `trim`, then the `LEVEL` tables.
+After changing voices or levels, render the previews again and compare. Set the master first, then each song's `trim`, then its `mix` table.

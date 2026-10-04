@@ -1,5 +1,5 @@
 import { store } from '../core/storage.js';
-import { DANCE, TRACK_IDS } from './catalog.js';
+import { SOLAR, TRACK_IDS } from './catalog.js';
 import { clamp } from '../core/math.js';
 /** Owns preferences, musical clock, voices, and the bounded chapter cache. */
 export function createAudioState(storage = store) {
@@ -12,8 +12,8 @@ export function createAudioState(storage = store) {
   audio.analyser = null;
   audio.frequencyData = null;
   audio.bassShelf = undefined;
-  audio.savedTrack = Number(storage.get('musicTrack', DANCE));
-  audio.trackId = TRACK_IDS.includes(audio.savedTrack) ? audio.savedTrack : DANCE;
+  audio.savedTrack = Number(storage.get('musicTrack', SOLAR));
+  audio.trackId = TRACK_IDS.includes(audio.savedTrack) ? audio.savedTrack : SOLAR;
   audio.enabled = storage.get('mus', true) !== false;
   audio.volume = clamp(Number(storage.get('musicVol', 78)) || 0, 0, 100);
   audio.bassAmount = clamp(Number(storage.get('bassAmt', 68)) || 0, 0, 100);
@@ -47,9 +47,7 @@ export function createAudioState(storage = store) {
   audio.worker = null;
   audio.timer = null;
   audio.environmentKey = '';
-  audio.chapters = new Map();
   audio.liveVoices = 0;
-  audio.lastDanceAccent = -Infinity;
   audio.lastRewardTime = -Infinity;
   return audio;
 }

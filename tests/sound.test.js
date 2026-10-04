@@ -30,7 +30,7 @@ test('the last stage of the master rounds peaks off below full scale instead of 
   }
 });
 
-test('the music bus has a parallel exciter that saturates the top of the mix and joins it again', () => {
+test('the music bus is clean: no exciter, only a gentle presence and air lift, and a path to the output', () => {
   for (const id of TRACK_IDS) {
     const audio = createAudioState(),
       context = fakeContext();
@@ -38,18 +38,20 @@ test('the music bus has a parallel exciter that saturates the top of the mix and
     audio.context = context;
     audio.master = createAudioOutput(context);
     createAudioGraph({ audio }).buildMusicGraph();
-    const highpass = context.nodes.find(
-        (node) =>
-          node.kind === 'biquad' && node.type === 'highpass' && node.frequency.value === 1500,
-      ),
-      [excite] = highpass ? highpass.edges : [];
-    assert(highpass, `${TRACKS[id].name}: the exciter's high-pass`);
-    assert.equal(excite.kind, 'shaper');
-    // A strong tanh curve: the quiet part is steep, so soft sounds gain harmonics too.
-    const mid = (excite.curve.length - 1) / 2;
-    assert(excite.curve[Math.floor(mid * 1.1)] > 0.4 && excite.curve.at(-1) === 1);
-    assert(reaches(excite, context.destination));
-    // The exciter is parallel: the mix still reaches the output without passing through it.
+    // The saturation that once added dense highs also added a glassy hiss: only the soft master
+    // saturator and the voices' own drive are left.
+    const highpasses = context.nodes.filter(
+      (node) => node.kind === 'biquad' && node.type === 'highpass' && node.frequency.value >= 1000,
+    );
+    assert.equal(highpasses.length, 0, `${TRACKS[id].name}: no exciter high-pass`);
+    const lifts = context.nodes.filter(
+      (node) =>
+        node.kind === 'biquad' &&
+        (node.type === 'peaking' || node.type === 'highshelf') &&
+        node.frequency.value >= 3000,
+    );
+    for (const lift of lifts)
+      assert(Math.abs(lift.gain.value) <= 3, `${TRACKS[id].name}: top-end EQ stays gentle`);
     assert(reaches(audio.musIn, context.destination));
   }
 });

@@ -123,10 +123,6 @@ export function createKit({ audio, audioGraph, audioMath }) {
         song.melDuck.gain.setValueAtTime(1 - share, t);
         song.melDuck.gain.setTargetAtTime(1, t + 0.012, 0.075);
       }
-      if (song.voxDuck) {
-        song.voxDuck.gain.setValueAtTime(1 - duck * 0.3, t);
-        song.voxDuck.gain.setTargetAtTime(1, t + 0.012, 0.09);
-      }
     }
     audio.stemFlash.kick = 0.16;
   }

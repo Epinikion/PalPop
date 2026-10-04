@@ -12,7 +12,6 @@ import { KICK_HZ, kickTuning } from '../src/audio/instruments/kit-dsp.js';
 import { createTransitions } from '../src/audio/instruments/transitions.js';
 import { createSupersaw } from '../src/audio/instruments/supersaw.js';
 import { sweepFor } from '../src/audio/sweep.js';
-import { composeFestivalPhrase } from '../src/audio/songs/festival-composition.js';
 import { TRACKS, TRACK_IDS } from '../src/audio/catalog.js';
 import { analyzeBars, decodeWav } from '../tools/analyze-wav.mjs';
 import { fakeContext, reaches } from './helpers/fake-audio.js';
@@ -87,12 +86,13 @@ test('the DJ filter opens through intros, closes through builds and rests out of
   assert.deepEqual(audio.graph.song.sweep.frequency.calls, [[400, 2, 0.03]]);
 });
 
-for (const style of ['festival', 'dance', 'techno'])
+for (const style of ['euphoria', 'rave', 'melodic', 'anthem'])
   test(`${style}: builds sweep the filter upward and every drop snaps it open`, () => {
     const { comp, bar } = arrangement(style);
     let previous = 0,
-      sawBuild = false;
-    for (let index = 0; index < 64; index++) {
+      sawBuild = false,
+      sawDrop = false;
+    for (let index = 0; index < 400; index++) {
       const section = comp.sectionAt(index),
         sweeps = bar(index).filter(({ name }) => name === 'eSweep');
       if (section.sec === 'BUILD') {
@@ -101,68 +101,49 @@ for (const style of ['festival', 'dance', 'techno'])
         assert(first > previous || section.bs === 0, `${style} bar ${index} must keep rising`);
         previous = sweeps.at(-1).args[1];
         assert(sweeps.every(({ args }) => args[1] >= 20));
-      } else if (['PEAK', 'FINAL'].includes(section.sec)) {
+      } else if (section.sec === 'DROP') {
+        sawDrop = true;
         assert(sweeps.length > 0 && sweeps.every(({ args }) => args[1] < 20));
         if (section.bs === 0)
           assert(previous === 0 || previous >= 300, 'a build preceded the drop');
         previous = 0;
-      }
+      } else previous = 0;
     }
-    assert(sawBuild);
+    assert(sawBuild && sawDrop);
   });
 
-for (const style of ['festival', 'dance'])
-  test(`${style}: the bar before a drop goes quiet on its last beat and the drop lands with an impact`, () => {
+for (const style of ['euphoria', 'rave', 'melodic', 'anthem'])
+  test(`${style}: the last beat before a drop goes quiet and the drop lands with an impact`, () => {
     const { audio, comp, bar } = arrangement(style);
-    let drops = 0;
-    for (let index = 1; index < 64; index++) {
-      const section = comp.sectionAt(index),
-        before = comp.sectionAt(index - 1);
-      if (!['PEAK', 'FINAL'].includes(section.sec) || section.bs !== 0 || before.sec !== 'BUILD')
-        continue;
+    let silent = 0,
+      drops = 0;
+    for (let index = 1; index < 400; index++) {
+      const section = comp.sectionAt(index);
+      if (section.sec !== 'DROP' || section.bs !== 0) continue;
       drops++;
+      const hit = bar(index)
+        .filter(({ args }) => args[0] === index * 16 * audio.session.s16)
+        .map(({ name }) => name);
+      for (const voice of ['eKick', 'eCrash', 'eImpact']) assert(hit.includes(voice), voice);
+      // Some builds hold the last beat back completely: no kick, no bass, no melody in it.
+      const plan = comp.planAt(index - 1);
+      if (!plan.dropout) continue;
+      silent++;
       const gap = bar(index - 1),
-        s16 = audio.session.s16;
-      assert(gap.every(({ args }) => args[0] < ((index - 1) * 16 + 12) * s16));
+        quiet = ((index - 1) * 16 + 12) * audio.session.s16;
+      assert(plan.sec === 'BUILD');
+      assert(
+        gap.every(({ name, args }) => args[0] < quiet || ['eSweep', 'eSnare'].includes(name)),
+        `${style}: bar ${index - 1} has notes in its last beat`,
+      );
       assert(
         gap.some(({ name }) => name === 'eSwell'),
         'a reverse swell lands in the gap',
       );
-      const hit = bar(index)
-        .filter(({ args }) => args[0] === index * 16 * s16)
-        .map(({ name }) => name);
-      for (const voice of ['eKick', 'eCrash', 'eImpact']) assert(hit.includes(voice), voice);
     }
-    assert(drops >= 1);
+    assert(drops >= 2);
+    assert(silent >= 1, 'at least one drop is announced by a silent last beat');
   });
-
-test('festival breakdowns replay the hook on piano and never on the saw lead', () => {
-  const { audio, comp, bar } = arrangement('festival');
-  const root = 60 + audio.session.pc - (audio.session.pc > 7 ? 12 : 0);
-  let melodic = 0;
-  for (let index = 0; index < 64; index++) {
-    const section = comp.sectionAt(index);
-    if (section.sec !== 'BREAK') continue;
-    const events = bar(index);
-    assert(!events.some(({ name }) => name === 'eFestivalLead'));
-    if (section.bs < 2) continue;
-    const theme = composeFestivalPhrase(audio.session.seed, Math.floor(index / 8)).melody.filter(
-      ([step]) => Math.floor(step / 16) === index % 8,
-    );
-    const played = events.filter(
-      ({ name, args }) => name === 'eFestivalPiano' && args[1].length === 1,
-    );
-    for (const [step, degree] of theme) {
-      const note = root + audio.session.mode.s[degree % 7] + Math.floor(degree / 7) * 12;
-      assert(
-        played.some(({ args }) => args[1][0] === note),
-        `bar ${index} step ${step % 16}`,
-      );
-      melodic++;
-    }
-  }
-  assert(melodic > 0);
-});
 
 test('supersaw voices are wide but symmetric, and one cleanup releases every oscillator', () => {
   const context = fakeContext(),
@@ -242,7 +223,7 @@ test('the kick ducks the bass bus fully and the synth bus by the song pump share
 });
 
 test('kick variants hold their loudness and the rumble feed rides on the kick', () => {
-  const levels = [0, 1, 2, 3].map((variant) => {
+  const levels = [0, 1, 2, 3, 4, 5].map((variant) => {
       const { drums, cleanups } = drumRig();
       drums.eKick(1, 0.5, 0, 0, undefined, variant);
       return cleanups[0][1].gain.value;

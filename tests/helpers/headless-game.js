@@ -47,7 +47,7 @@ export function headlessGame() {
   const noop = () => {},
     quiet = new Proxy({}, { get: (_, key) => (key === 'then' ? undefined : noop) }),
     game = createGameState(),
-    audio = { enabled: false, feverOn: false, hype: 0, stemFlash: {}, trackId: 6 },
+    audio = { enabled: false, feverOn: false, hype: 0, stemFlash: {}, trackId: 1 },
     events = [],
     audioReactions = new Proxy(
       {},

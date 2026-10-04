@@ -1,6 +1,5 @@
 /** Gameplay accents reuse the arrangement's voices, so they follow its mix levels. */
-const PIANO_ACCENT = 1.8;
-const STAB_ACCENT = 2.2;
+const STAB_ACCENT = 0.3;
 
 /**
  * How far ahead the scheduler plans notes. A late tick means the page was busy (a slow phone, a
@@ -60,55 +59,21 @@ export function createAudioScheduler({
         audio.pendingFx.length = 0;
         const tb = nextBeatTime(now + 0.35),
           st = Math.max(now + 0.02, tb - 0.55);
-        if (
-          S.style === 'festival' ||
-          S.style === 'vocal' ||
-          S.style === 'indie' ||
-          S.style === 'trance'
-        ) {
-          const bar = Math.max(0, Math.floor((tb - audio.songStart) / (S.spb * 4))),
-            section = audioComposition.sectionAt(bar),
-            chord = audioComposition.chordFor(bar, section.sec, section.cyc);
-          audioInstruments.eFestivalPiano(
-            tb,
-            chord.notes.slice(0, 3),
-            S.spb * 0.5,
-            0.15 * PIANO_ACCENT,
-          );
-        } else if (S.style === 'dance') {
-          const bar = Math.max(0, Math.floor((tb - audio.songStart) / (S.spb * 4))),
-            SA = audioComposition.sectionAt(bar),
-            ch = audioComposition.chordFor(bar, SA.sec, SA.cyc);
-          audioInstruments.eDanceChord(tb, ch.notes, S.spb * 0.8, 0.065);
-        } else {
-          audioInstruments.eRiser(st, tb - st, 0.12);
-          audioInstruments.eImpact(tb, 0.6);
-          audioInstruments.eCrash(tb, 0.09, false);
-        }
+        audioInstruments.eRiser(st, tb - st, 0.12);
+        audioInstruments.eImpact(tb, 0.6);
+        audioInstruments.eCrash(tb, 0.09, false);
       }
       // Coalesce cascade rewards into one short reply per beat; never queue melodic runs.
       if (audio.pendingHits.length && now >= audio.lastRewardTime) {
         const e = audio.pendingHits.splice(0)[0],
           tb = nextBeatTime(now + 0.02),
           bar = Math.max(0, Math.floor((tb - audio.songStart) / (S.spb * 4))),
-          section = audioComposition.sectionAt(bar),
-          chord = audioComposition.chordFor(bar, section.sec, section.cyc);
+          chord = audioComposition.chordFor(bar);
         audio.lastRewardTime = tb + S.spb;
-        if (
-          S.style === 'festival' ||
-          S.style === 'vocal' ||
-          S.style === 'indie' ||
-          S.style === 'trance'
-        )
-          audioInstruments.eFestivalPiano(
-            tb,
-            chord.notes.slice(0, 3),
-            S.s16 * 1.5,
-            0.17 * PIANO_ACCENT,
-          );
-        else if (S.style === 'dance')
-          audioInstruments.eDanceChord(tb, chord.notes.slice(0, 3), S.s16 * 0.8, 0.16, 0.5);
-        else audioInstruments.eStab(tb, chord.notes.slice(0, 3), 0.065 * STAB_ACCENT, false);
+        audioInstruments.eRave(tb, chord.notes.slice(0, 3), S.s16 * 1.5, STAB_ACCENT, {
+          style: S.voices,
+          filter: 0.7,
+        });
         if (e.combo >= 4) audioInstruments.eClap(tb + S.s16 * 2, 0.05);
       }
     } else {
@@ -156,7 +121,6 @@ export function createAudioScheduler({
     if (fresh !== false || !audio.session) {
       audio.seed = seedOverride !== undefined ? seedOverride : (Math.random() * 0xffffffff) >>> 0;
       audio.session = audioComposition.composeSession(audio.seed);
-      audio.chapters.clear();
     }
     audioGraph.newSongBuses();
     const t = audio.context.currentTime + 0.08,
@@ -179,7 +143,6 @@ export function createAudioScheduler({
     audio.pendingFx.length = 0;
     audio.pendingHits.length = 0;
     audio.environmentKey = '';
-    audio.lastDanceAccent = -Infinity;
     audio.lastRewardTime = -Infinity;
     audio.graph.gLP.frequency.cancelScheduledValues(t);
     audio.graph.gLP.frequency.setValueAtTime(20000, t);
