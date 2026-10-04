@@ -6,6 +6,7 @@ import { CH_MAX, W } from '../src/config.js';
 import { createRenderText } from '../src/render/text.js';
 import { HINTS, learnHint, loadHints, pickHint } from '../src/game/hints.js';
 import { adaptLook } from '../src/audio/scheduler.js';
+import { hasHomeBar } from '../src/ui/viewport.js';
 
 const memory = () => {
   const map = new Map();
@@ -103,4 +104,28 @@ test('the manifest ships padded maskable icons that the offline cache carries', 
     assert(precache.includes(icon.src), icon.src + ' is cached offline');
   }
   assert(manifest.icons.some((i) => i.purpose === 'any'));
+});
+
+test('tall phone screens have a home indicator, phones with a home button do not', () => {
+  assert(hasHomeBar(402, 874), 'iPhone 16 Pro');
+  assert(hasHomeBar(874, 402), 'the same turned sideways');
+  assert(hasHomeBar(375, 812), 'iPhone X');
+  assert(!hasHomeBar(375, 667), 'iPhone SE');
+  assert(!hasHomeBar(414, 736), 'iPhone 8 Plus');
+  assert(!hasHomeBar(820, 1180), 'an iPad');
+});
+
+test('every icon file is a PNG of the size its name and the manifest promise', () => {
+  const size = (name) => {
+    const bytes = fs.readFileSync(new URL('../' + name, import.meta.url));
+    assert.equal(bytes.toString('latin1', 1, 4), 'PNG', name);
+    return [bytes.readUInt32BE(16), bytes.readUInt32BE(20)];
+  };
+  assert.deepEqual(size('icon-192.png'), [192, 192]);
+  assert.deepEqual(size('icon-512.png'), [512, 512]);
+  assert.deepEqual(size('icon-maskable-192.png'), [192, 192]);
+  assert.deepEqual(size('icon-maskable-512.png'), [512, 512]);
+  assert.deepEqual(size('apple-touch-icon.png'), [180, 180]);
+  const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert(html.includes('apple-touch-icon.png'));
 });

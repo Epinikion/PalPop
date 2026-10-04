@@ -2121,3 +2121,15 @@ html.calm *::after {
     background: #1c1432;
   }
 }
+
+/* Installed on a phone with a home indicator: the page is told no bottom inset, so leave room. */
+@media (max-width: 699px) and (orientation: portrait) {
+  html.home-bar #app {
+    padding-bottom: max(env(safe-area-inset-bottom), 30px);
+  }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  html.home-bar #app {
+    padding-bottom: max(env(safe-area-inset-bottom), 20px);
+  }
+}

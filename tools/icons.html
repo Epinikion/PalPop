@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pal Pop icons</title>
+    <style>
+      body {
+        margin: 16px;
+        background: #161027;
+        color: #fbeed8;
+        font:
+          14px/1.5 system-ui,
+          sans-serif;
+      }
+      figure {
+        display: inline-block;
+        margin: 0 16px 16px 0;
+        text-align: center;
+      }
+      canvas {
+        display: block;
+        width: 192px;
+        height: 192px;
+        image-rendering: pixelated;
+      }
+      a {
+        color: #7ff0ff;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Pal Pop icons</h1>
+    <p>
+      Drawn from the game's own sprites by <code>icon-art.js</code>. Right-click a picture to save
+      it, or use the links; the repository ships the PNGs next to <code>index.html</code>.
+    </p>
+    <div id="out"></div>
+    <script type="module">
+      import { drawIcon } from './icon-art.js';
+      const ICONS = [
+        ['icon-512.png', 512, false],
+        ['icon-192.png', 192, false],
+        ['apple-touch-icon.png', 180, false],
+        ['icon-maskable-512.png', 512, true],
+        ['icon-maskable-192.png', 192, true],
+      ];
+      for (const [name, size, maskable] of ICONS) {
+        const canvas = drawIcon(size, maskable),
+          figure = document.createElement('figure'),
+          link = document.createElement('a');
+        link.textContent = name;
+        link.download = name;
+        link.href = canvas.toDataURL('image/png');
+        figure.append(canvas, link);
+        document.querySelector('#out').append(figure);
+      }
+    </script>
+  </body>
+</html>

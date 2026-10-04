@@ -19,3 +19,18 @@ export function readInsets() {
   probe.remove();
   return { top, bottom, lvh };
 }
+
+/** True on a tall phone screen, the shape that has a home indicator instead of a home button. */
+export const hasHomeBar = (screenWidth, screenHeight) =>
+  Math.max(screenWidth, screenHeight) / Math.min(screenWidth, screenHeight) > 2;
+
+/**
+ * An installed iPhone app that does not ask for `viewport-fit=cover` is told no bottom inset, yet
+ * the home indicator still sits over the last pixels, so the buttons need room of their own.
+ */
+export function markHomeBar() {
+  document.documentElement.classList.toggle(
+    'home-bar',
+    isStandalone() && hasHomeBar(window.screen.width, window.screen.height),
+  );
+}
