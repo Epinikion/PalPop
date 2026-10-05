@@ -576,6 +576,10 @@ body {
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
 }
+/* A scrolling column scrolls instead of squeezing what is in it. */
+.sheet > * {
+  flex-shrink: 0;
+}
 .trk {
   padding: 6px 8px 6px 6px !important;
   gap: 10px !important;
@@ -608,9 +612,12 @@ body {
   display: flex;
   box-sizing: border-box;
 }
+/* The square picture gives the cell its height. Safari does not size a button by its
+   aspect-ratio reliably, which let the last row of the Palbook spill over the text below. */
 .cell canvas {
   width: 100%;
-  height: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
   image-rendering: pixelated;
   display: block;
 }
