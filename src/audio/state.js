@@ -28,6 +28,8 @@ export function createAudioState(storage = store) {
   audio.step = 0;
   audio.section = 'READY';
   audio.onRecord = false;
+  /** Pals whose names the song is singing: `{ tier, t, hold }`, tier -1 for all of them. */
+  audio.palCues = [];
   audio.bar = 0;
   audio.hype = 0;
   audio.seed = (Math.random() * 0xffffffff) >>> 0;

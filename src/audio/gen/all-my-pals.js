@@ -7,6 +7,10 @@
  *   follows these bars while the song plays (the recording itself plays untouched).
  * - `chords`: the chord of every bar, one scale degree of A minor per character.
  * - `sections`: where each part starts, `kick` the bars with a beat, `sung` the bars with a voice.
+ * - `names`: when each pal's name is sung (seconds into the file, tier, how long its pal shines);
+ *   tier -1 is "all my pals" or "every pal", for every pal at once. Found with a speech recogniser
+ *   that times each word (Parakeet TDT through sherpa-onnx); "Bolt", which it missed, sits where
+ *   "Boo" sits in the line before.
  * - `onset`: when the first note passes 1 % of full scale. The times above are measured on the file
  *   as ffmpeg decodes it; browsers' decoders may start a few milliseconds earlier or later, which
  *   this one landmark lets the player measure and correct.
@@ -66,5 +70,27 @@ export const ALL_MY_PALS = {
   sung: [
     [8, 22],
     [40, 72],
+  ],
+  names: [
+    [14.24, 0, 0.45],
+    [15.04, 1, 0.45],
+    [21.28, 2, 0.45],
+    [22.16, 3, 0.45],
+    [28.32, 4, 0.45],
+    [29.12, 5, 0.45],
+    [35.2, -1, 0.6],
+    [38.72, 10, 0.6],
+    [70.56, 6, 0.45],
+    [71.44, 7, 0.45],
+    [77.6, 8, 0.45],
+    [78.4, 9, 0.45],
+    [80.0, -1, 0.6],
+    [84.56, 13, 0.4],
+    [85.2, 14, 0.4],
+    [85.6, 15, 0.45],
+    [90.72, 10, 0.8],
+    [97.88, -1, 1.2],
+    [109.0, 10, 0.8],
+    [118.92, -1, 1.2],
   ],
 };

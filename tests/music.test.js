@@ -11,6 +11,7 @@ import { STYLES, STYLE_IDS } from '../src/audio/gen/styles.js';
 import { SCALES } from '../src/audio/gen/scales.js';
 import { createAudioGen } from '../src/audio/gen/engine.js';
 import { fakeContext } from './helpers/fake-audio.js';
+import { sungGlow } from '../src/render/sung.js';
 import fs from 'node:fs';
 
 const SEEDS = [42, 7, 123456789];
@@ -272,6 +273,8 @@ test('merge feedback is immediate while musical rewards coalesce and retry prese
 });
 
 const RECORD = STYLES.pals.record;
+/** The pals the song names: Blipp to Solis, and Goldie, Zappy and Icy. */
+const TIERS_OF_SONG = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 15];
 
 test('the recorded song plays over and over, half a minute apart, with its measured form', () => {
   for (const seed of SEEDS) {
@@ -364,6 +367,38 @@ test('the measured song data is complete and fits inside its file', () => {
   assert(marks.at(-1) < seconds && marks.at(-1) > seconds - 0.5, `${seconds.toFixed(2)} s`);
 });
 
+test('every pal is named where the song sings, in order, and the glow follows the words', () => {
+  const marks = RECORD.bars,
+    barOf = (seconds) => marks.findLastIndex((mark) => mark <= seconds);
+  let previous = 0;
+  const named = new Set();
+  for (const [at, tier, hold] of RECORD.names) {
+    assert(at > previous, 'in the order they are sung');
+    previous = at;
+    const bar = barOf(at);
+    assert(
+      RECORD.sung.some(([from, to]) => bar >= from - 1 && bar < to),
+      `${at} s (bar ${bar}) is in a sung part`,
+    );
+    assert(tier === -1 || TIERS_OF_SONG.includes(tier));
+    assert(hold > 0 && hold <= 1.5);
+    named.add(tier);
+  }
+  for (const tier of TIERS_OF_SONG) assert(named.has(tier), `tier ${tier} is sung`);
+  // The glow: full while the name is sung, fading after, a short pop as it starts; -1 lights all.
+  const cues = [
+    { tier: 3, t: 10, hold: 0.45 },
+    { tier: -1, t: 20, hold: 1.2 },
+  ];
+  const during = sungGlow(cues, 10.1, 16);
+  assert.equal(during.glow[3], 1);
+  assert(during.pop[3] > 0.5 && during.glow[4] === 0);
+  const after = sungGlow(cues, 10.45 + 0.35, 16);
+  assert(Math.abs(after.glow[3] - 0.5) < 1e-6 && after.pop[3] === 0);
+  assert.equal(sungGlow(cues, 12, 16), null);
+  assert(sungGlow(cues, 20.5, 16).glow.every((level) => level === 1));
+});
+
 test('the clock follows the recording bar by bar, and generated tracks keep their tempo', () => {
   const session = composeGenSession('pals', 42, null),
     timeline = createTimeline(session),
@@ -449,6 +484,11 @@ test('the engine starts the song with its first bar, or joins it on a beat where
       }
       for (let step = 8; step < 64; step++) play(step, time(step));
       assert.equal(starts.length, 1, 'it is started once');
+      // Blipp's name is sung just before bar 8: its cue lands when the word is heard.
+      for (let step = 64; step < 9 * 16; step++) play(step, time(step));
+      const blipp = audio.palCues.filter((cue) => cue.tier === 0);
+      assert.equal(blipp.length, 1);
+      assert(Math.abs(blipp[0].t - (1 + 14.24 - RECORD.bars[0])) < 1e-6);
       const source = starts[0].node;
       assert(audio.graph.song.extras.includes(source), 'a new song stops it');
       assert(source.edges[0].edges.includes(record));

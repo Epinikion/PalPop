@@ -193,7 +193,10 @@ export function createAudioGen(
     if (si === 0) startBar(plan, t);
     if (plan.record) {
       if (si % 4 === 0) keepRecord(plan, step, t);
-      if (playing?.track === plan.track) flashRecord(plan.record, si);
+      if (playing?.track === plan.track) {
+        flashRecord(plan.record, si);
+        cueNames(plan.local, si, t);
+      }
       return;
     }
     if (si % 4 === 0 && !(plan.dropout && si >= 12))
@@ -230,6 +233,24 @@ export function createAudioGen(
     if (record.kick && si % 2 === 0) flash.drums = 0.12;
     if (si % 8 === 0) flash.synth = 0.2;
     if (record.sung) flash.vocal = 0.25;
+  }
+
+  /**
+   * The pals whose names are sung in this step: each becomes a cue at the moment its name is heard,
+   * which the board turns into a glow on every pal of that kind (see render/sung.js).
+   */
+  function cueNames(local, si, t) {
+    const marks = style.record.bars,
+      span = marks[local + 1] - marks[local],
+      from = marks[local] + (si / 16) * span,
+      to = from + span / 16,
+      cues = (audio.palCues ||= []);
+    for (const [at, tier, hold] of style.record.names)
+      if (at >= from && at < to) {
+        // Old cues go as new ones come, so the list stays a handful long.
+        while (cues.length && cues[0].t + cues[0].hold < t - 4) cues.shift();
+        cues.push({ tier, t: t + (at - from), hold });
+      }
   }
 
   /** Percussion between the drums, in each style's colour. */

@@ -2,6 +2,7 @@ import { FL, FLOOR, FR, FT, H, PRISM, RAIL_Y, SPECIALS, TIERS, VMAX, W } from '.
 import { RM, feel } from '../core/dom.js';
 import { clamp } from '../core/math.js';
 import { HINTS, pickHint } from '../game/hints.js';
+import { sungGlow } from './sung.js';
 export function createRenderBoard({
   audio,
   game,
@@ -231,8 +232,24 @@ export function createRenderBoard({
     }
     g.globalAlpha = 1;
   }
+  /** The pals the song is singing about right now (see audio.palCues), or null. */
+  function sungNow() {
+    const context = audio.context;
+    if (!audio.palCues?.length || !context || !audio.enabled) return null;
+    // What is heard now left the audio clock a moment ago: the device's output latency.
+    return sungGlow(
+      audio.palCues,
+      context.currentTime - (context.outputLatency || context.baseLatency || 0),
+      TIERS.length,
+    );
+  }
   function render() {
-    const g = uiElements.ctx;
+    const g = uiElements.ctx,
+      sung = sungNow(),
+      // A sung pal pops up a little and flashes white as its name starts (no flash when flashes
+      // are off, no pop when motion is reduced).
+      grow = (t) => (sung && !RM ? 1 + sung.pop[t] * 0.08 : 1),
+      shine = (t) => (sung && feel.flashes ? sung.pop[t] * 0.45 : 0);
     g.save();
     if (game.shakeMagnitude > 0)
       g.translate(
@@ -298,7 +315,10 @@ export function createRenderBoard({
     }
     g.globalCompositeOperation = 'lighter';
     for (const b of game.bodies) {
-      const a = b.t >= PRISM ? 0.4 : game.feverT > 0 ? 0.16 : 0;
+      const a = Math.max(
+        b.t >= PRISM ? 0.4 : game.feverT > 0 ? 0.16 : 0,
+        sung ? sung.glow[b.t] * 0.65 : 0,
+      );
       if (a <= 0) continue;
       const hs = renderSprites.HALO[b.t].width;
       g.globalAlpha = a;
@@ -307,7 +327,15 @@ export function createRenderBoard({
     g.globalAlpha = 1;
     g.globalCompositeOperation = 'source-over';
     for (const b of game.bodies)
-      drawPal(g, b, b.x, b.y, b.s, b.q - (clamp(b.vy, 0, VMAX) / VMAX) * 0.16, b.flash);
+      drawPal(
+        g,
+        b,
+        b.x,
+        b.y,
+        b.s * grow(b.t),
+        b.q - (clamp(b.vy, 0, VMAX) / VMAX) * 0.16,
+        Math.max(b.flash, shine(b.t)),
+      );
     // The lose line is drawn over the pile so that nothing can hide it; a dark row under it keeps
     // it readable on any background. In danger it turns solid and every culprit gets a ring that
     // fills as its two seconds run out.
@@ -349,15 +377,27 @@ export function createRenderBoard({
           const f = (y - y0) / Math.max(1, y1 - y0);
           g.fillRect(Math.round(cx + (hx - cx) * f), y, 1, 1);
         }
-        if (game.held.t === PRISM) {
+        const halo = Math.max(
+          game.held.t === PRISM ? 0.4 : 0,
+          sung ? sung.glow[game.held.t] * 0.65 : 0,
+        );
+        if (halo > 0) {
           g.globalCompositeOperation = 'lighter';
-          g.globalAlpha = 0.4;
-          const hs = renderSprites.HALO[PRISM].width;
-          g.drawImage(renderSprites.HALO[PRISM], hx - hs / 2, hy - hs / 2);
+          g.globalAlpha = halo;
+          const hs = renderSprites.HALO[game.held.t].width;
+          g.drawImage(renderSprites.HALO[game.held.t], hx - hs / 2, hy - hs / 2);
           g.globalAlpha = 1;
           g.globalCompositeOperation = 'source-over';
         }
-        drawPal(g, game.held, hx, hy, game.held.s, Math.sin(game.elapsed * 6) * 0.04, 0);
+        drawPal(
+          g,
+          game.held,
+          hx,
+          hy,
+          game.held.s * grow(game.held.t),
+          Math.sin(game.elapsed * 6) * 0.04,
+          shine(game.held.t),
+        );
       }
     }
     for (const r of game.rings) drawRing(g, r.x, r.y, r.r, r.c);
