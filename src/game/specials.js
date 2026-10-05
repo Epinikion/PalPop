@@ -1,4 +1,8 @@
 import { GOLDIE, SCORE, TIERS, W, ZAPPY } from '../config.js';
+/** Icy's frost: how far it reaches, the largest tier it shatters, and how many pals at most. */
+const FROST_REACH = 40;
+const FROST_TIER = 2;
+const FROST_MAX = 5;
 import { vib } from '../core/dom.js';
 export function createGameSpecials({
   audioReactions,
@@ -97,9 +101,37 @@ export function createGameSpecials({
     game.flashOpacity = Math.max(game.flashOpacity, 0.25);
     vib([25, 20, 40]);
   }
+  /** The small pals around Icy (Blipp, Chirpy, Bunbun) shatter: they make room and pay points. */
+  function shatter(b) {
+    const mult = curMult(),
+      near = game.bodies
+        .filter(
+          (o) =>
+            o !== b &&
+            !o.dead &&
+            !o.mg &&
+            o.t <= FROST_TIER &&
+            Math.hypot(o.x - b.x, o.y - b.y) < FROST_REACH + o.r,
+        )
+        .sort((p, q) => Math.hypot(p.x - b.x, p.y - b.y) - Math.hypot(q.x - b.x, q.y - b.y))
+        .slice(0, FROST_MAX);
+    let pts = 0;
+    for (const o of near) {
+      o.dead = true;
+      pts += SCORE[o.t + 1] * mult;
+      const rp = TIERS[o.t].ramp;
+      gameEffects.burst(o.x, o.y, [rp[2], rp[3], '#d2f4ff', '#ffffff'], 12, 90, 70);
+      gameEffects.ring(o.x, o.y, TIERS[o.t].r + 3, '#d2f4ff');
+    }
+    if (pts > 0) {
+      gameActions.addScore(pts);
+      gameEffects.popup(b.x, Math.max(16, b.y - 14), 'SHATTER +' + pts, '#d2f4ff', 1, 1);
+    }
+  }
   function freezeTime(b) {
     audioReactions.reactToEvent('freeze', { x: b.x });
     b.dead = true;
+    shatter(b);
     game.iceTime = 7;
     for (const o of game.bodies) o.ot = 0;
     gameEffects.burst(b.x, b.y, ['#9fe2ff', '#d2f4ff', '#ffffff'], 36, 110, 40);

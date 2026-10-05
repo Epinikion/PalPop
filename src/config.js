@@ -42,8 +42,8 @@ const SPECIALS = [
   {
     t: ICY,
     req: 7,
-    hint: 'FREEZES TIME',
-    desc: 'SLOWS TIME FOR 7 SECONDS AND CLEARS ANY WARNING. THE STACK CAN NOT LOSE.',
+    hint: 'SHATTERS + FREEZES',
+    desc: 'SHATTERS THE SMALL PALS AROUND IT, THEN SLOWS TIME FOR 7 SECONDS AND CLEARS ANY WARNING. THE STACK CAN NOT LOSE.',
   },
 ];
 /** Which themed world shows once a tier has been reached (index into the worlds): dusk to sunrise. */

@@ -16,6 +16,8 @@ export function createGameState(storage = store) {
   game.banner = null;
   game.dying = null;
   game.merging = [];
+  /** Merges still running together as liquid on screen (see render/goo.js). */
+  game.goos = [];
   game.iris = null;
   game.shoot = null;
   game.physicsAccumulator = 0;

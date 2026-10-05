@@ -36,6 +36,8 @@ import { learnHint, loadHints } from './hints.js';
 import { TRACKS } from '../audio/catalog.js';
 import { BADGE_XP, checkBadges } from './badges.js';
 import { dailyMutator, mutatorById, newMutators, offerMutators } from './mutators.js';
+/** How long two merged pals take to run together into the new one, as liquid (s). */
+const GOO_LIFE = 0.24;
 export function createGameActions({
   audio,
   audioReactions,
@@ -96,6 +98,7 @@ export function createGameActions({
     game.banner = null;
     game.dying = null;
     game.merging = [];
+    game.goos = [];
     game.physicsAccumulator = 0;
     game.score = 0;
     game.displayScore = 0;
@@ -297,7 +300,13 @@ export function createGameActions({
     vib([30, 30, 30]);
     gameProgression.misEvent('fever', 1);
   }
-  function doMerge(a, b, mvx, mvy) {
+  /** The merged pals run into the new one like drops of water, for a moment (render/goo.js). */
+  function goo(pal, from) {
+    if (!from) return;
+    game.goos.push({ pal, from, age: 0, life: GOO_LIFE });
+    if (game.goos.length > 12) game.goos.shift();
+  }
+  function doMerge(a, b, mvx, mvy, from) {
     // The title-screen demo animates pals without awarding gameplay progress.
     if (game.phase === 'title') {
       a.dead = b.dead = true;
@@ -310,6 +319,7 @@ export function createGameActions({
         pal.vx = mvx || 0;
         pal.vy = mvy || 0;
         game.bodies.push(pal);
+        goo(pal, from);
       }
       gameEffects.burst(x, y, TIERS[t].ramp.slice(2), 8, 50, 60);
       return;
@@ -398,6 +408,7 @@ export function createGameActions({
     nb.ot = -GAMEPLAY.mergeGrace;
     game.lastNb = nb;
     game.bodies.push(nb);
+    goo(nb, from);
     /* A small local nudge helps the new, larger pal settle into its next match. */
     for (const o of game.bodies) {
       if (o === nb || o.dead || o.mg) continue;

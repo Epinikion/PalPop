@@ -4,6 +4,7 @@ import { clamp } from '../core/math.js';
 import { HINTS, pickHint } from '../game/hints.js';
 import { sungGlow } from './sung.js';
 import { BEAT_GROW, beatPulse } from './beat.js';
+import { drawBlobs, drawGoo } from './goo.js';
 /** Where the lyrics sit (under the coaching hints), how many letters fit in a row, how long a line fades. */
 const LYRIC_Y = 68;
 const LYRIC_ROW = 26;
@@ -388,12 +389,27 @@ export function createRenderBoard({
     }
     g.globalAlpha = 1;
     g.globalCompositeOperation = 'source-over';
+    // Merging pals stay where they touched while a neck of goo joins them; then they run into the
+    // new pal like drops of water (render/goo.js). Reduced motion keeps the plain, quick merge.
+    const touched = new Map();
+    if (!RM) {
+      for (const m of game.merging) {
+        if (!m.from) continue;
+        touched.set(m.a, m.from[0]);
+        touched.set(m.b, m.from[1]);
+        drawBlobs(
+          g,
+          m.from.map((f) => ({ x: f.x, y: f.y, r: TIERS[f.t].r, ramp: TIERS[f.t].ramp })),
+        );
+      }
+      for (const goo of game.goos) drawGoo(g, goo, renderSprites.SPR);
+    }
     for (const b of game.bodies)
       drawPal(
         g,
         b,
-        b.x,
-        b.y,
+        touched.get(b)?.x ?? b.x,
+        touched.get(b)?.y ?? b.y,
         b.s * grow(b.t),
         b.q - (clamp(b.vy, 0, VMAX) / VMAX) * 0.16,
         Math.max(b.flash, shine(b.t)),

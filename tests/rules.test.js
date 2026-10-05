@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { headlessGame } from './helpers/headless-game.js';
-import { CH_MAX, FLOOR, GOLDIE, LOSE_Y, MAXT, PRISM, SCORE, SPECIALS } from '../src/config.js';
+import { CH_MAX, FLOOR, GOLDIE, ICY, LOSE_Y, MAXT, PRISM, SCORE, SPECIALS } from '../src/config.js';
 import { GAMEPLAY } from '../src/settings.js';
 import { mulberry32 } from '../src/core/math.js';
 import { dailySeed } from '../src/game/records.js';
@@ -158,6 +158,42 @@ test('Icy clears every warning and holds the countdown while it lasts', () => {
   assert.equal(game.phase, 'play');
   assert(tall.ot < 0.5, 'the countdown drains while time is frozen');
   assert.equal(game.danger, false);
+});
+
+test('Icy shatters the small pals around it into points before time slows down', () => {
+  const { game, pal, run } = started();
+  const icy = pal(ICY, 60, 150),
+    small = [pal(0, 42, 152), pal(1, 78, 150), pal(2, 60, 172)],
+    far = pal(0, 15, 120),
+    big = pal(3, 60, 126);
+  icy.age = 0.89;
+  const before = game.score;
+  run(1 / 60);
+  assert(
+    small.every((p) => p.dead),
+    'Blipp, Chirpy and Bunbun next to it shatter',
+  );
+  assert(!far.dead && !big.dead, 'pals out of reach or bigger stay');
+  assert(game.score - before >= SCORE[1] + SCORE[2] + SCORE[3], 'and they pay points');
+  assert(game.iceTime > 0, 'then time slows down');
+});
+
+test('a merge runs together like drops of water for a moment, from where the two touched', () => {
+  const { game, pal, run } = started();
+  const a = pal(2, 50, FLOOR - 9),
+    b = pal(2, 68.5, FLOOR - 9);
+  run(0.1);
+  assert(a.dead && b.dead, 'the two touching Bunbuns merged');
+  assert.equal(game.goos.length, 1);
+  const [goo] = game.goos;
+  assert.equal(goo.pal, game.lastNb, 'into the new pal');
+  assert.deepEqual(
+    goo.from.map((f) => f.t),
+    [2, 2],
+  );
+  assert(goo.from[0].x < goo.from[1].x - 15, 'from where each of them was');
+  run(0.3);
+  assert.equal(game.goos.length, 0, 'and is gone a moment later');
 });
 
 test('the Sun is a victory: it sweeps the small pals, starts a fever and is counted', () => {

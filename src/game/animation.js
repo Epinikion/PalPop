@@ -10,6 +10,10 @@ export function createGameAnimation({ game, gameEffects, gamePhysics, gameSpecia
   }
   function stepBodies(dt) {
     gamePhysics.advance(dt);
+    if (game.goos.length) {
+      for (const goo of game.goos) goo.age += dt;
+      game.goos = game.goos.filter((goo) => goo.age < goo.life);
+    }
     for (const b of game.bodies) {
       b.sv += (1 - b.s) * 340 * dt;
       b.sv *= Math.exp(-7 * dt);

@@ -74,6 +74,11 @@ export function createGamePhysics({
             game.merging.push({
               a,
               b,
+              // where the two touched, for the liquid drawn as they run together
+              from: [
+                { x: a.x, y: a.y, t: a.t },
+                { x: b.x, y: b.y, t: b.t },
+              ],
               t: settings.mergeDelay,
               vx: ((a.vx * massA + b.vx * massB) / total) * 0.65,
               vy: ((a.vy * massA + b.vy * massB) / total) * 0.45,
@@ -163,7 +168,7 @@ export function createGamePhysics({
         m.t -= h;
         if (m.t <= 0) {
           m.done = true;
-          onMerge(a, b, m.vx, m.vy);
+          onMerge(a, b, m.vx, m.vy, m.from);
         }
       }
       game.merging = game.merging.filter((m) => !m.done);
