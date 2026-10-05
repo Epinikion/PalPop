@@ -144,6 +144,7 @@ export function createAudioScheduler({
     audio.pendingFx.length = 0;
     audio.pendingHits.length = 0;
     audio.palCues.length = 0;
+    audio.lyricCues.length = 0;
     audio.environmentKey = '';
     audio.lastRewardTime = -Infinity;
     audio.graph.gLP.frequency.cancelScheduledValues(t);

@@ -30,6 +30,8 @@ export function createAudioState(storage = store) {
   audio.onRecord = false;
   /** Pals whose names the song is singing: `{ tier, t, hold }`, tier -1 for all of them. */
   audio.palCues = [];
+  /** The song's lines to show: `{ appear, end, words: [{ t, word }] }`. */
+  audio.lyricCues = [];
   audio.bar = 0;
   audio.hype = 0;
   audio.seed = (Math.random() * 0xffffffff) >>> 0;

@@ -3,6 +3,11 @@ import { RM, feel } from '../core/dom.js';
 import { clamp } from '../core/math.js';
 import { HINTS, pickHint } from '../game/hints.js';
 import { sungGlow } from './sung.js';
+/** Where the lyrics sit (under the coaching hints), how many letters fit in a row, how long a line fades. */
+const LYRIC_Y = 68;
+const LYRIC_ROW = 26;
+const LYRIC_FADE = 0.5;
+
 export function createRenderBoard({
   audio,
   game,
@@ -243,6 +248,53 @@ export function createRenderBoard({
       TIERS.length,
     );
   }
+  /**
+   * The line of the song being sung, written behind the pals (when lyrics are switched on): a row
+   * or two of pixel text that fades in just before the line and out after it, its words turning
+   * gold as they are sung.
+   */
+  function drawLyrics(g) {
+    const cues = audio.lyricCues,
+      context = audio.context;
+    if (!feel.lyrics || !cues?.length || !context || !audio.enabled || game.phase !== 'play')
+      return;
+    const now = context.currentTime - (context.outputLatency || context.baseLatency || 0),
+      line = cues.find((cue) => now >= cue.appear && now < cue.end + LYRIC_FADE);
+    if (!line) return;
+    const fade = Math.min(
+      1,
+      (now - line.appear) / 0.25,
+      (line.end + LYRIC_FADE - now) / LYRIC_FADE,
+    );
+    const rows = [[]];
+    let used = -1;
+    for (const word of line.words) {
+      if (used + 1 + word.word.length > LYRIC_ROW && rows.at(-1).length) {
+        rows.push([]);
+        used = -1;
+      }
+      rows.at(-1).push(word);
+      used += 1 + word.word.length;
+    }
+    rows.forEach((row, k) => {
+      const widths = row.map((w) => renderText.textW(w.word, 1)),
+        total = widths.reduce((sum, w) => sum + w, 0) + 4 * (row.length - 1);
+      let x = Math.round(W / 2 - total / 2);
+      row.forEach((w, i) => {
+        const sung = now >= w.t;
+        g.globalAlpha = fade * (sung ? 0.85 : 0.4);
+        renderText.drawText(
+          g,
+          w.word,
+          x + widths[i] / 2,
+          LYRIC_Y + k * 8,
+          sung ? '#ffd23f' : '#fff',
+        );
+        x += widths[i] + 4;
+      });
+    });
+    g.globalAlpha = 1;
+  }
   function render() {
     const g = uiElements.ctx,
       sung = sungNow(),
@@ -291,6 +343,7 @@ export function createRenderBoard({
       g.globalAlpha = 1;
       g.globalCompositeOperation = 'source-over';
     }
+    drawLyrics(g);
     if (game.phase === 'play' && game.held) {
       const r = TIERS[game.held.t].r;
       let yl = FLOOR - r;

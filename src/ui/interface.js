@@ -407,12 +407,15 @@ export function createUiInterface({
   // Haptics and screen flashes can be switched off; both choices are saved.
   feel.haptics = store.get('haptics', true) !== false;
   feel.flashes = store.get('flashes', true) !== false;
+  // The words of ALL MY PALS behind the board, while the song plays; off unless switched on.
+  feel.lyrics = store.get('lyrics', false) === true;
   // iPhones have no web vibration, so the switch would do nothing there.
   if (!navigator.vibrate) $('#vibTog').hidden = true;
   function renderFeel() {
     for (const [id, on, label] of [
       ['vibTog', feel.haptics, 'HAPTICS'],
       ['flashTog', feel.flashes, 'FLASHES'],
+      ['lyricsTog', feel.lyrics, 'LYRICS'],
     ]) {
       $('#' + id).setAttribute('aria-pressed', String(on));
       $('#' + id).textContent = label + (on ? ' ON' : ' OFF');
@@ -428,6 +431,11 @@ export function createUiInterface({
   $('#flashTog').addEventListener('click', () => {
     feel.flashes = !feel.flashes;
     store.set('flashes', feel.flashes);
+    renderFeel();
+  });
+  $('#lyricsTog').addEventListener('click', () => {
+    feel.lyrics = !feel.lyrics;
+    store.set('lyrics', feel.lyrics);
     renderFeel();
   });
   renderFeel();

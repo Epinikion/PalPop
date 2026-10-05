@@ -4,6 +4,8 @@ import { stemsFor } from '../stems.js';
 import { recordsFor } from '../records.js';
 import { STYLES } from './styles.js';
 
+/** How long before its first word a line of the song shows (s). */
+const LINE_LEAD = 0.6;
 /** Which kit kick each style uses. */
 const KICKS = { clean: 0, punch: 1, hard: 2, round: 3 };
 /** Each melodic layer's filter range: 0 in the automation is the low end, 1 the high end (Hz). */
@@ -41,6 +43,14 @@ export function createAudioGen(
     { mix } = style,
     stems = stemsFor(audio),
     records = style.record ? recordsFor(audio) : null;
+  /** The song's lines as `{ start, end, words: [[seconds, word]] }` (see all-my-pals.js). */
+  const lines = (style.record?.lyrics || []).map(([end, text]) => {
+    const words = text.split(' ').map((item) => {
+      const at = item.lastIndexOf('@');
+      return [Number(item.slice(at + 1)), item.slice(0, at)];
+    });
+    return { start: words[0][0], end, words };
+  });
   /** The recorded song that is playing: on which song bus, for which track, from which source. */
   let playing = null;
   /** The last bar started, so a bar that does not follow it (a new song, music switched back on) is known. */
@@ -196,6 +206,7 @@ export function createAudioGen(
       if (playing?.track === plan.track) {
         flashRecord(plan.record, si);
         cueNames(plan.local, si, t);
+        cueLines(plan.local, si, t);
       }
       return;
     }
@@ -251,6 +262,29 @@ export function createAudioGen(
         while (cues.length && cues[0].t + cues[0].hold < t - 4) cues.shift();
         cues.push({ tier, t: t + (at - from), hold });
       }
+  }
+
+  /**
+   * The lines of the song, for the lyrics behind the board (render/board.js): each becomes a cue a
+   * moment before it is sung, with the time of every word in the audio clock.
+   */
+  function cueLines(local, si, t) {
+    const marks = style.record.bars,
+      span = marks[local + 1] - marks[local],
+      from = marks[local] + (si / 16) * span,
+      to = from + span / 16,
+      cues = (audio.lyricCues ||= []),
+      clock = (at) => t + (at - from);
+    for (const line of lines) {
+      const appear = line.start - LINE_LEAD;
+      if (appear < from || appear >= to) continue;
+      while (cues.length && cues[0].end < t - 4) cues.shift();
+      cues.push({
+        appear: clock(appear),
+        end: clock(line.end),
+        words: line.words.map(([at, word]) => ({ t: clock(at), word })),
+      });
+    }
   }
 
   /** Percussion between the drums, in each style's colour. */

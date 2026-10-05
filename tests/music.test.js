@@ -399,6 +399,44 @@ test('every pal is named where the song sings, in order, and the glow follows th
   assert(sungGlow(cues, 20.5, 16).glow.every((level) => level === 1));
 });
 
+test('the lyrics are the song as written, timed word by word, one line after another', () => {
+  const written = [
+    'Blipp and Chirpy, falling from the sky',
+    'Bunbun, Froggo, learning how to fly',
+    'Tabby, Pandi, merging into one',
+    'every pal is reaching for the sun',
+    'Boo and Hootie, glowing in the dark',
+    'Bolt and Drako, every pal a spark',
+    'Goldie, Zappy, Icy, hold on tight',
+    'Solis rising, we will burn so bright',
+    "All my pals, we're shining as one",
+    'higher and higher, up to the sun',
+    "hold on tight, we'll never fall apart",
+    "all my pals, you're beating in my heart",
+  ];
+  const lines = RECORD.lyrics.map(([end, text]) => ({
+    end,
+    words: text.split(' ').map((item) => [Number(item.split('@')[1]), item.split('@')[0]]),
+  }));
+  assert.deepEqual(
+    lines.map((line) => line.words.map(([, word]) => word).join(' ')),
+    written,
+  );
+  let previous = 0;
+  for (const { end, words } of lines) {
+    assert(words[0][0] - 0.6 > previous, 'a line shows only after the one before has gone');
+    words.forEach(([at], i) => i && assert(at > words[i - 1][0], 'words in order'));
+    assert(end > words.at(-1)[0] && end < words.at(-1)[0] + 2);
+    previous = end;
+    // Two rows of the board's pixel font hold any line.
+    assert(words.map(([, w]) => w).join(' ').length <= 2 * 26);
+  }
+  // Each sung name glows on the word it is.
+  const names = ['Blipp', 'Chirpy,', 'Bunbun,', 'Froggo,', 'Tabby,', 'Pandi,'];
+  for (const [at, tier] of RECORD.names.slice(0, 6))
+    assert(lines.some((line) => line.words.some(([t, w]) => t === at && w === names[tier])));
+});
+
 test('the clock follows the recording bar by bar, and generated tracks keep their tempo', () => {
   const session = composeGenSession('pals', 42, null),
     timeline = createTimeline(session),
@@ -489,6 +527,14 @@ test('the engine starts the song with its first bar, or joins it on a beat where
       const blipp = audio.palCues.filter((cue) => cue.tier === 0);
       assert.equal(blipp.length, 1);
       assert(Math.abs(blipp[0].t - (1 + 14.24 - RECORD.bars[0])) < 1e-6);
+      // ...and its line shows a moment before it, every word timed.
+      const [first] = audio.lyricCues;
+      assert.equal(
+        first.words.map((w) => w.word).join(' '),
+        'Blipp and Chirpy, falling from the sky',
+      );
+      assert(Math.abs(first.words[0].t - (1 + 14.24 - RECORD.bars[0])) < 1e-6);
+      assert(first.appear < first.words[0].t && first.end > first.words.at(-1).t);
       const source = starts[0].node;
       assert(audio.graph.song.extras.includes(source), 'a new song stops it');
       assert(source.edges[0].edges.includes(record));
