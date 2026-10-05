@@ -7,7 +7,7 @@ const mkc = (w, h) => {
   return c;
 };
 /** Player switches for the two physical effects; the Sound sheet flips them and saves them. */
-const feel = { haptics: true, flashes: true, lyrics: false };
+const feel = { haptics: true, flashes: true, lyrics: false, beat: true };
 const vib = (p) => {
   if (!feel.haptics) return;
   try {

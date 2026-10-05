@@ -32,6 +32,8 @@ export function createAudioState(storage = store) {
   audio.palCues = [];
   /** The song's lines to show: `{ appear, end, words: [{ t, word }] }`. */
   audio.lyricCues = [];
+  /** The kicks scheduled lately, `{ t, v }`, which the board's beat mode follows. */
+  audio.beats = [];
   audio.bar = 0;
   audio.hype = 0;
   audio.seed = (Math.random() * 0xffffffff) >>> 0;

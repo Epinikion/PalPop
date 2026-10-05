@@ -204,6 +204,8 @@ export function createAudioGen(
     if (plan.record) {
       if (si % 4 === 0) keepRecord(plan, step, t);
       if (playing?.track === plan.track) {
+        // The recording's kicks fall on the beats of the bars that have them.
+        if (plan.record.kick && si % 4 === 0) beat(t, 1);
         flashRecord(plan.record, si);
         cueNames(plan.local, si, t);
         cueLines(plan.local, si, t);
@@ -213,6 +215,7 @@ export function createAudioGen(
     if (si % 4 === 0 && !(plan.dropout && si >= 12))
       I.eSweep(t, sweepFor(plan.sec, (plan.bs + si / 16) / plan.len));
 
+    if (d.kick[si] > 0) beat(t, d.kick[si]);
     if (d.kick[si] > 0)
       I.eKick(
         t,
@@ -244,6 +247,13 @@ export function createAudioGen(
     if (record.kick && si % 2 === 0) flash.drums = 0.12;
     if (si % 8 === 0) flash.synth = 0.2;
     if (record.sung) flash.vocal = 0.25;
+  }
+
+  /** A kick, for the board's beat mode (render/beat.js): when it sounds and how hard. */
+  function beat(t, v) {
+    const beats = (audio.beats ||= []);
+    while (beats.length && beats[0].t < t - 2) beats.shift();
+    beats.push({ t, v });
   }
 
   /**

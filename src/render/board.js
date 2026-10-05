@@ -3,6 +3,7 @@ import { RM, feel } from '../core/dom.js';
 import { clamp } from '../core/math.js';
 import { HINTS, pickHint } from '../game/hints.js';
 import { sungGlow } from './sung.js';
+import { BEAT_GROW, beatPulse } from './beat.js';
 /** Where the lyrics sit (under the coaching hints), how many letters fit in a row, how long a line fades. */
 const LYRIC_Y = 68;
 const LYRIC_ROW = 26;
@@ -239,14 +240,21 @@ export function createRenderBoard({
   }
   /** The pals the song is singing about right now (see audio.palCues), or null. */
   function sungNow() {
+    if (!audio.palCues?.length || !audio.context || !audio.enabled) return null;
+    return sungGlow(audio.palCues, heardNow(), TIERS.length);
+  }
+  /** What is heard now left the audio clock a moment ago: the device's output latency. */
+  function heardNow() {
     const context = audio.context;
-    if (!audio.palCues?.length || !context || !audio.enabled) return null;
-    // What is heard now left the audio clock a moment ago: the device's output latency.
-    return sungGlow(
-      audio.palCues,
-      context.currentTime - (context.outputLatency || context.baseLatency || 0),
-      TIERS.length,
-    );
+    return context.currentTime - (context.outputLatency || context.baseLatency || 0);
+  }
+  /**
+   * Beat mode: how much bigger the pals look on this frame, as they pulse with the kick. Only the
+   * drawing grows; the bodies the physics knows keep their size.
+   */
+  function beatNow() {
+    if (!feel.beat || RM || !audio.beats?.length || !audio.context || !audio.enabled) return 1;
+    return 1 + beatPulse(audio.beats, heardNow()) * BEAT_GROW;
   }
   /**
    * The line of the song being sung, written behind the pals (when lyrics are switched on): a row
@@ -298,9 +306,10 @@ export function createRenderBoard({
   function render() {
     const g = uiElements.ctx,
       sung = sungNow(),
+      pulse = beatNow(),
       // A sung pal pops up a little and flashes white as its name starts (no flash when flashes
-      // are off, no pop when motion is reduced).
-      grow = (t) => (sung && !RM ? 1 + sung.pop[t] * 0.08 : 1),
+      // are off, no pop when motion is reduced); every pal pulses with the kick in beat mode.
+      grow = (t) => pulse * (sung && !RM ? 1 + sung.pop[t] * 0.08 : 1),
       shine = (t) => (sung && feel.flashes ? sung.pop[t] * 0.45 : 0);
     g.save();
     if (game.shakeMagnitude > 0)

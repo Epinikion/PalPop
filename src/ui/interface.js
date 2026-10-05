@@ -409,6 +409,8 @@ export function createUiInterface({
   feel.flashes = store.get('flashes', true) !== false;
   // The words of ALL MY PALS behind the board, while the song plays; off unless switched on.
   feel.lyrics = store.get('lyrics', false) === true;
+  // Beat mode: the pals pulse with the kick (only how they look, never their size in the physics).
+  feel.beat = store.get('beat', true) !== false;
   // iPhones have no web vibration, so the switch would do nothing there.
   if (!navigator.vibrate) $('#vibTog').hidden = true;
   function renderFeel() {
@@ -416,6 +418,7 @@ export function createUiInterface({
       ['vibTog', feel.haptics, 'HAPTICS'],
       ['flashTog', feel.flashes, 'FLASHES'],
       ['lyricsTog', feel.lyrics, 'LYRICS'],
+      ['beatTog', feel.beat, 'BEAT'],
     ]) {
       $('#' + id).setAttribute('aria-pressed', String(on));
       $('#' + id).textContent = label + (on ? ' ON' : ' OFF');
@@ -436,6 +439,11 @@ export function createUiInterface({
   $('#lyricsTog').addEventListener('click', () => {
     feel.lyrics = !feel.lyrics;
     store.set('lyrics', feel.lyrics);
+    renderFeel();
+  });
+  $('#beatTog').addEventListener('click', () => {
+    feel.beat = !feel.beat;
+    store.set('beat', feel.beat);
     renderFeel();
   });
   renderFeel();

@@ -12,6 +12,7 @@ import { SCALES } from '../src/audio/gen/scales.js';
 import { createAudioGen } from '../src/audio/gen/engine.js';
 import { fakeContext } from './helpers/fake-audio.js';
 import { sungGlow } from '../src/render/sung.js';
+import { beatPulse } from '../src/render/beat.js';
 import fs from 'node:fs';
 
 const SEEDS = [42, 7, 123456789];
@@ -437,6 +438,46 @@ test('the lyrics are the song as written, timed word by word, one line after ano
     assert(lines.some((line) => line.words.some(([t, w]) => t === at && w === names[tier])));
 });
 
+test('beat mode pulses with each kick that has sounded and settles before the next', () => {
+  const beats = [
+    { t: 1, v: 1 },
+    { t: 1.44, v: 0.7 },
+    { t: 1.88, v: 1 },
+  ];
+  assert.equal(beatPulse(beats, 0.9), 0, 'nothing before the first kick');
+  assert.equal(beatPulse(beats, 1), 1);
+  assert(beatPulse(beats, 1.2) < 0.25, 'gone well before the next beat');
+  assert(Math.abs(beatPulse(beats, 1.44) - 0.7) < 0.02, 'a softer kick, a smaller pulse');
+  assert.equal(beatPulse([{ t: 5, v: 1 }], 4.99), 0, 'a kick still to come does not count');
+  // Generated tracks report every kick they strike.
+  const audio = createAudioState();
+  audio.trackId = TRACK_IDS.find((id) => TRACKS[id].style === 'euphoria');
+  const audioComposition = createAudioComposition({ audio });
+  audio.session = audioComposition.composeSession(42);
+  audio.graph = { song: { duck: {}, melLP: {} } };
+  const kicks = [],
+    play = createAudioGen(
+      {
+        audio,
+        audioComposition,
+        audioInstruments: new Proxy(
+          {},
+          {
+            get:
+              (_, name) =>
+              (...args) =>
+                name === 'eKick' && kicks.push(args[0]),
+          },
+        ),
+      },
+      'euphoria',
+    ).scheduleStep;
+  for (let step = 0; step < 16 * 12; step++) play(step, step * audio.session.s16);
+  assert(kicks.length > 0);
+  for (const t of kicks.filter((k) => k > kicks.at(-1) - 1.5))
+    assert(audio.beats.some((b) => b.t === t));
+});
+
 test('the clock follows the recording bar by bar, and generated tracks keep their tempo', () => {
   const session = composeGenSession('pals', 42, null),
     timeline = createTimeline(session),
@@ -527,6 +568,9 @@ test('the engine starts the song with its first bar, or joins it on a beat where
       const blipp = audio.palCues.filter((cue) => cue.tier === 0);
       assert.equal(blipp.length, 1);
       assert(Math.abs(blipp[0].t - (1 + 14.24 - RECORD.bars[0])) < 1e-6);
+      // The recording's kicks, on the beats of its kick bars, drive the board's beat mode.
+      for (const step of [128, 132, 136, 140])
+        assert(audio.beats.some((b) => Math.abs(b.t - time(step)) < 1e-9 && b.v === 1));
       // ...and its line shows a moment before it, every word timed.
       const [first] = audio.lyricCues;
       assert.equal(
