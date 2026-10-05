@@ -17,8 +17,8 @@ import fs from 'node:fs';
 
 const SEEDS = [42, 7, 123456789];
 const timelineOf = (id, seed) => createTimeline(composeGenSession(id, seed, null));
-/** The first generated track of a set (ALL MY PALS opens with its recorded song). */
-const firstGenerated = (timeline) => (timeline.track(0).record ? 1 : 0);
+/** The first generated track of a set, or -1 when the set only plays a recording (ALL MY PALS). */
+const firstGenerated = (timeline) => [0, 1, 2, 3].find((i) => !timeline.track(i).record) ?? -1;
 
 test('every catalog song is a generated style with a complete registration', () => {
   assert.deepEqual(TRACK_IDS, [1, 2, 3, 4, 5]);
@@ -54,11 +54,12 @@ for (const id of STYLE_IDS)
       const second = [...bars].reverse().map((bar) => JSON.stringify(backward.plan(bar)));
       assert.deepEqual(first, second.reverse());
       const generated = firstGenerated(forward);
-      assert.notEqual(
-        JSON.stringify(timelineOf(id, seed + 1).track(generated).loops),
-        JSON.stringify(forward.track(generated).loops),
-        'another seed is another set',
-      );
+      if (generated >= 0)
+        assert.notEqual(
+          JSON.stringify(timelineOf(id, seed + 1).track(generated).loops),
+          JSON.stringify(forward.track(generated).loops),
+          'another seed is another set',
+        );
     }
   });
 
@@ -152,8 +153,9 @@ for (const id of STYLE_IDS)
     const timeline = timelineOf(id, 42),
       index = firstGenerated(timeline),
       track = timeline.track(index),
-      start = timeline.locate(index ? timeline.track(0).length : 0).start,
+      start = index > 0 ? timeline.locate(timeline.track(0).length).start : 0,
       covered = {};
+    if (index < 0) return;
     for (let bar = start; bar < start + track.length; bar++) {
       const plan = timeline.plan(bar);
       for (const entry of plan.stems) {
@@ -240,8 +242,12 @@ test('all arrangements play a long session with finite, in-time musical events',
           );
         }
       }
-    for (const voice of ['eKick', 'eHat', 'eClap', 'eCrash', 'eRiser', 'eImpact'])
-      assert(names.has(voice), `${TRACKS[id].name} plays ${voice}`);
+    // A set that only plays a recording strikes nothing itself.
+    const voices =
+      STYLES[style].record?.every === 1
+        ? []
+        : ['eKick', 'eHat', 'eClap', 'eCrash', 'eRiser', 'eImpact'];
+    for (const voice of voices) assert(names.has(voice), `${TRACKS[id].name} plays ${voice}`);
   }
 });
 
@@ -277,57 +283,40 @@ const RECORD = STYLES.pals.record;
 /** The pals the song names: Blipp to Solis, and Goldie, Zappy and Icy. */
 const TIERS_OF_SONG = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 15];
 
-test('the recorded song plays over and over, half a minute apart, with its measured form', () => {
+test('the recorded song plays over and over, each play right after the last, with its form', () => {
+  const length = RECORD.bars.at(-1) - RECORD.bars[0];
   for (const seed of SEEDS) {
     const timeline = timelineOf('pals', seed);
     let bar = 0;
-    for (let index = 0; index < 8; index++) {
+    for (let index = 0; index < 4; index++) {
       const track = timeline.track(index);
-      assert.equal(!!track.record, index % 2 === 0);
-      if (track.record) {
-        assert.equal(track.pc, 9);
-        assert.equal(track.scale, 'minor');
-        assert.equal(track.length, 104);
-        assert.deepEqual(
-          track.sections.map((section) => [section.start, section.type]),
-          RECORD.sections,
+      assert(track.record, 'every track is the song');
+      assert.equal(track.pc, 9);
+      assert.equal(track.scale, 'minor');
+      assert.equal(track.length, 104);
+      assert.deepEqual(
+        track.sections.map((section) => [section.start, section.type]),
+        RECORD.sections,
+      );
+      assert.equal(
+        track.chords.map((chord) => chord.deg).join(''),
+        RECORD.chords,
+        'one chord per bar, as measured',
+      );
+      for (let local = 0; local < track.length; local++) {
+        const plan = timeline.plan(bar + local);
+        assert.equal(plan.record.file, 'all-my-pals.mp3');
+        assert.equal(plan.stems.length, 0);
+        assert(Object.values(plan.drums).every((row) => row.every((v) => v === 0)));
+        assert(
+          Object.values(plan.on).every((on) => !on),
+          'nothing generated plays over it',
         );
-        assert.equal(
-          track.chords.map((chord) => chord.deg).join(''),
-          RECORD.chords,
-          'one chord per bar, as measured',
-        );
-        for (let local = 0; local < track.length; local++) {
-          const plan = timeline.plan(bar + local);
-          assert.equal(plan.record.file, 'all-my-pals.mp3');
-          assert.equal(plan.stems.length, 0);
-          assert(Object.values(plan.drums).every((row) => row.every((v) => v === 0)));
-          assert(
-            Object.values(plan.on).every((on) => !on),
-            'nothing generated plays over it',
-          );
-        }
-        assert(timeline.plan(bar + 10).record.sung && timeline.plan(bar + 60).record.sung);
-        assert(timeline.plan(bar + 30).record.kick && !timeline.plan(bar + 60).record.kick);
-      } else {
-        // Between two plays: half a minute in the song's key and chords, a build, a drop, a breakdown.
-        assert.equal(track.pc, 9);
-        assert.equal(track.scale, 'minor');
-        assert.equal(track.chords.map((chord) => chord.deg).join(''), '3052', 'Dm Am F C');
-        assert.deepEqual(
-          track.sections.map((section) => [section.type, section.len]),
-          [
-            ['BUILD', 4],
-            ['DROP', 8],
-            ['BREAK', 4],
-          ],
-        );
-        const seconds = timeline.secondsAt((bar + 16) * 16) - timeline.secondsAt(bar * 16);
-        assert(seconds > 27 && seconds < 29, `${seconds.toFixed(1)} s`);
-        assert(track.loops.hookA.length && track.loops.bass.length);
-        assert(timeline.plan(bar + 3).dropout, 'the build ends in a silent beat before the drop');
-        assert(timeline.plan(bar + 4).fx.impact, 'the drop lands with an impact');
       }
+      assert(timeline.plan(bar + 10).record.sung && timeline.plan(bar + 60).record.sung);
+      assert(timeline.plan(bar + 30).record.kick && !timeline.plan(bar + 60).record.kick);
+      // The next play starts the moment this one ends.
+      assert(Math.abs(timeline.secondsAt(bar * 16) - index * length) < 1e-6);
       bar += track.length;
     }
   }
@@ -478,15 +467,16 @@ test('beat mode pulses with each kick that has sounded and settles before the ne
     assert(audio.beats.some((b) => b.t === t));
 });
 
-test('the clock follows the recording bar by bar, and generated tracks keep their tempo', () => {
+test('the clock follows the recording bar by bar, play after play, and generated sets keep their tempo', () => {
   const session = composeGenSession('pals', 42, null),
     timeline = createTimeline(session),
     marks = RECORD.bars;
   for (let bar = 0; bar <= 104; bar++)
     assert(Math.abs(timeline.secondsAt(bar * 16) - (marks[bar] - marks[0])) < 1e-9);
+  // The next play keeps the same bars.
   const next = timeline.secondsAt(104 * 16);
-  for (const steps of [1, 16, 160, 255])
-    assert(Math.abs(timeline.secondsAt(104 * 16 + steps) - next - steps * session.s16) < 1e-9);
+  for (const bar of [1, 24, 103])
+    assert(Math.abs(timeline.secondsAt((104 + bar) * 16) - next - (marks[bar] - marks[0])) < 1e-9);
   let previous = -Infinity;
   for (let step = 0; step < 16 * 600; step += 3.5) {
     const seconds = timeline.secondsAt(step);

@@ -114,34 +114,6 @@ const FORM = [
   },
 ];
 
-/**
- * The short instrumental between two plays of a recorded song (about half a minute at 137 BPM): a
- * build out of the song's outro, a drop, and a breakdown that hands over to the song's intro.
- */
-const INTERLUDE = [
-  {
-    type: BUILD,
-    len: [4],
-    layers: ['pad', 'arp', 'hook', 'roll', 'hat'],
-    late: ['kick', 'clap'],
-    auto: { pad: [0.5, 0.85], arp: [0.4, 1], hook: [0.35, 1], reverb: 0.6 },
-  },
-  {
-    type: DROP,
-    len: [8],
-    layers: ['kick', 'hat', 'open', 'clap', 'ride', 'perc', 'bass', 'hook', 'pad', 'stab'],
-    late: ['arp'],
-    auto: { bass: [0.85, 0.9], hook: [1, 1], pad: [0.85, 0.9], arp: [0.7, 0.8], reverb: 0.4 },
-  },
-  {
-    type: BREAK,
-    len: [4],
-    layers: ['pad', 'arp'],
-    late: ['hat'],
-    auto: { pad: [0.6, 0.35], arp: [0.55, 0.3], reverb: 0.8 },
-  },
-];
-
 export const STYLES = {
   /* Hard techno, after a 144 BPM clip: a distorted kick with a long tail and a rumble under it, fast
      hats, a short detuned riff that repeats and a dark pad that opens up in the breaks. */
@@ -251,50 +223,15 @@ export const STYLES = {
   },
 
   /* Vocal trance: the recorded song "All My Pals" (made with Suno, see all-my-pals.js) is the
-     soundtrack, played as it is, over and over like a game's theme. Between two plays comes a short
-     generated instrumental in the song's key and chords (Dm Am F C), in the sound of SOLAR RUSH. */
+     whole soundtrack, played as it is and over and over, like a game's theme. Nothing is generated;
+     gameplay replies take the sound of SOLAR RUSH. */
   pals: {
     bpm: [137, 137],
     swing: 0,
     keys: [9],
     scales: [['minor', 1]],
-    progressions: [[[3, 0, 5, 2], 1]],
-    bass: ['.RRR.RRR.RRR.RRR', '.RRR.RRR.RRR.ROR', '.RRO.RRO.RRO.RRO'],
-    bassRange: [33, 45],
-    hookRhythms: [
-      'X--X--X-X--X--X-',
-      'X-X-X--X-X-X--X-',
-      'X--X--X-X-X-X-X-',
-      'X---X--X--X-X---X--X--X-X-X-X---',
-      'X-X--X--X-X-X---X-X--X--X---X-X-',
-    ],
-    hookRange: [64, 84],
-    hookMoves: 'lead',
-    arp: {
-      rhythms: ['XXXXXXXXXXXXXXXX', 'XXXXXXXXXXXXXXXX', 'X.XXX.XXX.XXX.XX'],
-      orders: [
-        [0, 1, 2, 3],
-        [0, 2, 1, 3, 2, 1],
-        [0, 1, 2, 1, 3, 2, 1, 2],
-        [3, 2, 1, 0],
-      ],
-      range: [64, 88],
-    },
-    stabRhythms: null,
-    drums: {
-      kick: ['X...X...X...X...'],
-      hat: [',.,.,.,.,.,.,.,.', ',.-.,.-.,.-.,.-.', '-,-,-,-,-,-,-,-,'],
-      open: ['..x...x...x...x.'],
-      clap: ['....X.......X...'],
-      ride: ['..x...x...x...x.', 'x.o.x.o.x.o.x.o.'],
-      perc: ['................................', '..........o.........o.......o...'],
-    },
-    sound: { kick: 'clean', rumble: 0, hook: 'supersaw', arp: 'pluck', pad: 'wall', bass: 'roll' },
-    mix: { kick: 0.72, rumble: 0, bass: 0.8, hat: 1.5, open: 1.1, clap: 0.9, ride: 1, perc: 1 },
-    stems: { bass: 0.6, hook: 0.85, pad: 0.6, arp: 0.5, stab: 0.5 },
-    pump: 0.45,
-    form: INTERLUDE,
-    record: { every: 2, ...ALL_MY_PALS },
+    sound: { hook: 'supersaw' },
+    record: { every: 1, ...ALL_MY_PALS },
   },
 
   /* Melodic techno, after a 126 BPM mix in A minor: a round kick, a bass that rolls and moves to the

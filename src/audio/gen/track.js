@@ -102,7 +102,7 @@ export function composeTrack(session, index, previousPc) {
   const style = STYLES[session.style],
     seed = hash(session.seed, session.style, 'track', index);
   if (isRecord(session, index)) return recordTrack(session, index, seed);
-  // Tracks move to a new key each time; the short ones between plays of a recorded song stay in its key.
+  // Tracks move to a new key each time; those between plays of a recorded song stay in its key.
   const first = index === 0,
     pc = style.record
       ? style.record.pc
