@@ -73,7 +73,9 @@ for (const id of STYLE_IDS)
           assert(!prints.has(print), `${id} track ${index} repeats an earlier one`);
           prints.add(print);
         }
-        if (previous) assert.notEqual(track.pc, previous.pc, 'every track moves to a new key');
+        // A set with a recorded song stays in its key; every other set moves to a new key each track.
+        if (previous && !STYLES[id].record)
+          assert.notEqual(track.pc, previous.pc, 'every track moves to a new key');
         previous = track;
       }
       // The tracks follow each other without gaps.
@@ -93,7 +95,8 @@ for (const id of STYLE_IDS)
     for (let index = 0; index < 10; index++) {
       const track = timeline.track(index),
         types = track.sections.map((section) => section.type);
-      if (track.record) continue;
+      // A recorded song and the short instrumentals between its plays have their own shapes.
+      if (STYLES[id].record) continue;
       assert.equal(types[0], 'INTRO');
       assert.equal(types.at(-1), 'OUTRO');
       assert.equal(types.filter((type) => type === 'DROP').length, 2);
@@ -270,7 +273,7 @@ test('merge feedback is immediate while musical rewards coalesce and retry prese
 
 const RECORD = STYLES.pals.record;
 
-test('the recorded song comes back every other track, in A minor, with its measured form', () => {
+test('the recorded song plays over and over, half a minute apart, with its measured form', () => {
   for (const seed of SEEDS) {
     const timeline = timelineOf('pals', seed);
     let bar = 0;
@@ -302,7 +305,25 @@ test('the recorded song comes back every other track, in A minor, with its measu
         }
         assert(timeline.plan(bar + 10).record.sung && timeline.plan(bar + 60).record.sung);
         assert(timeline.plan(bar + 30).record.kick && !timeline.plan(bar + 60).record.kick);
-      } else assert.notEqual(track.pc, 9, 'a generated track moves away from the song key');
+      } else {
+        // Between two plays: half a minute in the song's key and chords, a build, a drop, a breakdown.
+        assert.equal(track.pc, 9);
+        assert.equal(track.scale, 'minor');
+        assert.equal(track.chords.map((chord) => chord.deg).join(''), '3052', 'Dm Am F C');
+        assert.deepEqual(
+          track.sections.map((section) => [section.type, section.len]),
+          [
+            ['BUILD', 4],
+            ['DROP', 8],
+            ['BREAK', 4],
+          ],
+        );
+        const seconds = timeline.secondsAt((bar + 16) * 16) - timeline.secondsAt(bar * 16);
+        assert(seconds > 27 && seconds < 29, `${seconds.toFixed(1)} s`);
+        assert(track.loops.hookA.length && track.loops.bass.length);
+        assert(timeline.plan(bar + 3).dropout, 'the build ends in a silent beat before the drop');
+        assert(timeline.plan(bar + 4).fx.impact, 'the drop lands with an impact');
+      }
       bar += track.length;
     }
   }
@@ -350,7 +371,7 @@ test('the clock follows the recording bar by bar, and generated tracks keep thei
   for (let bar = 0; bar <= 104; bar++)
     assert(Math.abs(timeline.secondsAt(bar * 16) - (marks[bar] - marks[0])) < 1e-9);
   const next = timeline.secondsAt(104 * 16);
-  for (const steps of [1, 16, 160, 999])
+  for (const steps of [1, 16, 160, 255])
     assert(Math.abs(timeline.secondsAt(104 * 16 + steps) - next - steps * session.s16) < 1e-9);
   let previous = -Infinity;
   for (let step = 0; step < 16 * 600; step += 3.5) {

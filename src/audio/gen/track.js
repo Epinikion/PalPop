@@ -102,15 +102,22 @@ export function composeTrack(session, index, previousPc) {
   const style = STYLES[session.style],
     seed = hash(session.seed, session.style, 'track', index);
   if (isRecord(session, index)) return recordTrack(session, index, seed);
+  // Tracks move to a new key each time; the short ones between plays of a recorded song stay in its key.
   const first = index === 0,
-    pc = first
-      ? session.pc
-      : pick(
-          style.keys.filter((key) => key !== previousPc),
-          seed,
-          'key',
-        ),
-    scale = first ? session.scale : weighted(style.scales, seed, 'scale'),
+    pc = style.record
+      ? style.record.pc
+      : first
+        ? session.pc
+        : pick(
+            style.keys.filter((key) => key !== previousPc),
+            seed,
+            'key',
+          ),
+    scale = style.record
+      ? style.record.scale
+      : first
+        ? session.scale
+        : weighted(style.scales, seed, 'scale'),
     [degrees, chordBars] = pick(style.progressions, seed, 'progression'),
     cycleBars = degrees.length * chordBars,
     steps = cycleBars * 16,
