@@ -4,8 +4,8 @@ const AFTER_HOURS = 3;
 const ANTHEM = 4;
 const PALS = 5;
 /**
- * The soundtracks. Each one is a generative style (see gen/profiles.js): the song is composed as it
- * plays, from the seed, and never loops. `trim` and `pump` are per-song balance of the master bus.
+ * The soundtracks. Each one is a generative style (see gen/styles.js): the song is composed as it
+ * plays, from the seed, and never loops; ALL MY PALS alternates a recorded song with it. `trim` and `pump` are per-song balance of the master bus.
  */
 const TRACKS = {
   [SOLAR]: {
@@ -55,14 +55,14 @@ const TRACKS = {
 };
 TRACKS[PALS] = {
   buttonId: 'palsTrack',
-  label: 'VOCAL TRANCE / A SUNG CHORUS ABOUT THE PALS',
+  label: 'VOCAL TRANCE / THE SONG ABOUT THE PALS',
   name: 'ALL MY PALS',
   style: 'pals',
   trim: 0.95,
   pump: 0.45,
-  bpm: 138,
+  bpm: 137,
   description:
-    'VOCAL TRANCE AT 138 BPM: EVERY OTHER TRACK IS THE SONG "ALL MY PALS", SUNG BY A SYNTHETIC VOICE, WITH VERSES THAT NAME THE PALS AND A CHORUS IN EVERY DROP. THE INSTRUMENTAL TRACKS BETWEEN ARE NEW EACH TIME.',
+    'VOCAL TRANCE: EVERY OTHER TRACK IS THE SONG "ALL MY PALS", MADE WITH SUNO, WITH VERSES THAT NAME THE PALS AND A CHORUS IN THE BREAKDOWN. THE INSTRUMENTAL TRACKS BETWEEN ARE NEW EACH TIME.',
 };
 const TRACK_IDS = Object.keys(TRACKS).map(Number);
 export { SOLAR, BLACKOUT, AFTER_HOURS, ANTHEM, PALS, TRACK_IDS, TRACKS };

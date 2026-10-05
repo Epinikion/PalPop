@@ -1,5 +1,7 @@
 /** Gameplay accents reuse the arrangement's voices, so they follow its mix levels. */
 const STAB_ACCENT = 0.3;
+/** How long a set that opens with a recorded song waits for it to load, at most (ms). */
+const RECORD_WAIT = 5000;
 
 /**
  * How far ahead the scheduler plans notes. A late tick means the page was busy (a slow phone, a
@@ -21,8 +23,8 @@ export function createAudioScheduler({
 }) {
   /* ---------- scheduler ---------- */
   function nextBeatTime(now) {
-    const k = Math.ceil((now - audio.songStart) / audio.session.spb);
-    return audio.songStart + k * audio.session.spb;
+    const k = Math.ceil(audioComposition.stepAt(now - audio.songStart) / 4 - 1e-6) * 4;
+    return audio.songStart + audioComposition.secondsAt(Math.max(0, k));
   }
   function musicTick() {
     if (
@@ -30,7 +32,8 @@ export function createAudioScheduler({
       !audio.graph ||
       !audio.session ||
       audio.context.state !== 'running' ||
-      !audio.playing
+      !audio.playing ||
+      audio.playing.waiting
     ) {
       audio.lastTick = -1;
       return;
@@ -44,16 +47,16 @@ export function createAudioScheduler({
     );
     audio.lastTick = now;
     if (audio.nextStepTime < now) {
-      const k = Math.max(0, Math.ceil((now + 0.015 - audio.songStart) / S.s16));
+      const k = Math.max(0, Math.ceil(audioComposition.stepAt(now + 0.015 - audio.songStart)));
       audio.step = k;
-      audio.nextStepTime = audio.songStart + k * S.s16;
+      audio.nextStepTime = audio.songStart + audioComposition.secondsAt(k);
     }
     const on = audio.enabled && audio.volume > 0;
     if (on) {
       while (audio.nextStepTime < now + audio.look) {
         arrangements[audio.session.style](audio.step, audio.nextStepTime);
         audio.step++;
-        audio.nextStepTime = audio.songStart + audio.step * S.s16;
+        audio.nextStepTime = audio.songStart + audioComposition.secondsAt(audio.step);
       }
       if (audio.pendingFx.length) {
         audio.pendingFx.length = 0;
@@ -67,8 +70,7 @@ export function createAudioScheduler({
       if (audio.pendingHits.length && now >= audio.lastRewardTime) {
         const e = audio.pendingHits.splice(0)[0],
           tb = nextBeatTime(now + 0.02),
-          bar = Math.max(0, Math.floor((tb - audio.songStart) / (S.spb * 4))),
-          chord = audioComposition.chordFor(bar);
+          chord = audioComposition.chordFor(audioComposition.barAt(tb - audio.songStart));
         audio.lastRewardTime = tb + S.spb;
         audioInstruments.eRave(tb, chord.notes.slice(0, 3), S.s16 * 1.5, STAB_ACCENT, {
           style: S.voices,
@@ -147,6 +149,22 @@ export function createAudioScheduler({
     audio.graph.gLP.frequency.setValueAtTime(20000, t);
     audio.graph.gG.gain.cancelScheduledValues(t);
     audio.graph.gG.gain.setValueAtTime(1, t);
+    // A set that opens with a recorded song gives it a moment to load, so the song starts with its
+    // first bar instead of joining under way; the clock starts when it is ready.
+    if (audioComposition.timeline().track(0).record) {
+      const playing = audio.playing,
+        ready = arrangements[S.style]?.prepare?.(0, 0);
+      if (ready) {
+        playing.waiting = true;
+        const wait = new Promise((resolve) => setTimeout(resolve, RECORD_WAIT));
+        Promise.race([ready.catch(() => {}), wait]).then(() => {
+          if (audio.playing !== playing) return;
+          playing.waiting = false;
+          audio.songStart = audio.nextStepTime = audio.context.currentTime + 0.08;
+          audio.step = 0;
+        });
+      }
+    }
     startScheduler();
   }
   /* reactive mix: called every frame; only touches AudioParams when the target changes */

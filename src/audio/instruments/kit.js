@@ -124,10 +124,6 @@ export function createKit({ audio, audioGraph, audioMath }) {
         song.melDuck.gain.setTargetAtTime(1 - share, t, 0.0012);
         song.melDuck.gain.setTargetAtTime(1, t + 0.02, 0.075);
       }
-      if (song.vocalDuck) {
-        song.vocalDuck.gain.setTargetAtTime(1 - duck * 0.18, t, 0.0015);
-        song.vocalDuck.gain.setTargetAtTime(1, t + 0.02, 0.09);
-      }
     }
     audio.stemFlash.kick = 0.16;
   }

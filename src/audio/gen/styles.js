@@ -1,5 +1,5 @@
 /**
- * The four styles as data. A style does not write music note by note; it holds the vocabulary a
+ * The styles as data. A style does not write music note by note; it holds the vocabulary a
  * producer of that genre works with - chord progressions, bass and hook rhythms, drum grooves, the
  * shape of a track - and `track.js` draws one track at a time from it.
  *
@@ -9,6 +9,7 @@
  * - hooks and stabs: `X` a new note, `-` hold it, `.` rest.
  * Progressions are scale degrees (0 = the key's root) with how many bars each chord lasts.
  */
+import { ALL_MY_PALS } from './all-my-pals.js';
 
 const INTRO = 'INTRO',
   GROOVE = 'GROOVE',
@@ -221,10 +222,11 @@ export const STYLES = {
     pump: 0.45,
   },
 
-  /* Vocal trance at 138 BPM: the sound of SOLAR RUSH, slower, and every other track is the sung song
-     "All My Pals" - verses that name the pals, a chorus in the breakdown and in both drops. */
+  /* Vocal trance: every other track is the recorded song "All My Pals" (made with Suno, see
+     all-my-pals.js), played as it is; the tracks between are generated in the sound of SOLAR RUSH,
+     slower, at the song's tempo. */
   pals: {
-    bpm: [138, 138],
+    bpm: [137, 137],
     swing: 0,
     keys: [9, 0, 2, 7, 5, 11],
     scales: [
@@ -275,48 +277,7 @@ export const STYLES = {
     mix: { kick: 0.72, rumble: 0, bass: 0.8, hat: 1.5, open: 1.1, clap: 0.9, ride: 1, perc: 1 },
     stems: { bass: 0.6, hook: 0.85, pad: 0.6, arp: 0.5, stab: 0.5 },
     pump: 0.45,
-    // Every other track is the sung one: always in E minor over Em C G D, with its own fixed form.
-    // `cues` says, per section of that form, at which bar each sung phrase starts (see
-    // tools/vocals/all-my-pals.json, where the phrases are written, and assets/vocals, where they are).
-    vocal: {
-      every: 2,
-      pc: 4,
-      scale: 'minor',
-      progression: [[0, 5, 2, 6], 2],
-      lengths: [16, 16, 16, 8, 32, 8, 8, 32, 16],
-      pre: 0.6,
-      phrases: { verse1: 8, verse2: 8, chorus: 8, hook: 1 },
-      cues: [
-        [],
-        [[8, 'verse1']],
-        [
-          [0, 'verse2'],
-          [8, 'chorus'],
-        ],
-        [
-          [0, 'hook'],
-          [2, 'hook'],
-          [4, 'hook'],
-          [6, 'hook'],
-        ],
-        [
-          [0, 'chorus'],
-          [16, 'chorus', 'chorus-low'],
-        ],
-        [[0, 'chorus']],
-        [
-          [0, 'hook'],
-          [2, 'hook'],
-          [4, 'hook'],
-          [6, 'hook'],
-        ],
-        [
-          [0, 'chorus', 'chorus-low'],
-          [16, 'chorus', 'chorus-low'],
-        ],
-        [[0, 'hook']],
-      ],
-    },
+    record: { every: 2, ...ALL_MY_PALS },
   },
 
   /* Melodic techno, after a 126 BPM mix in A minor: a round kick, a bass that rolls and moves to the

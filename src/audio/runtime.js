@@ -1,4 +1,5 @@
 import { createAudioOutput, SFX_GAIN } from './output.js';
+import { BASS_DEFAULT } from './state.js';
 export function createAudioRuntime({
   audio,
   audioGraph,
@@ -136,6 +137,11 @@ export function createAudioRuntime({
       const t = audio.context.currentTime;
       audio.musG.gain.setTargetAtTime(audio.enabled ? (audio.volume / 100) * 0.72 : 0, t, 0.06);
       audio.bassShelf.gain.setTargetAtTime((audio.bassAmount / 100) * 3, t, 0.08);
+      audio.recordShelf?.gain.setTargetAtTime(
+        ((audio.bassAmount - BASS_DEFAULT) / 100) * 3,
+        t,
+        0.08,
+      );
       audio.sfxG.gain.setTargetAtTime(
         audio.enabled ? (audio.effectsVolume / 100) * SFX_GAIN : 0,
         t,

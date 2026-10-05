@@ -9,11 +9,14 @@ import { TRACKS, TRACK_IDS } from '../src/audio/catalog.js';
 import { composeGenSession, createTimeline } from '../src/audio/gen/timeline.js';
 import { STYLES, STYLE_IDS } from '../src/audio/gen/styles.js';
 import { SCALES } from '../src/audio/gen/scales.js';
-import { VOCAL_FILES } from '../src/audio/vocals.js';
+import { createAudioGen } from '../src/audio/gen/engine.js';
+import { fakeContext } from './helpers/fake-audio.js';
 import fs from 'node:fs';
 
 const SEEDS = [42, 7, 123456789];
 const timelineOf = (id, seed) => createTimeline(composeGenSession(id, seed, null));
+/** The first generated track of a set (ALL MY PALS opens with its recorded song). */
+const firstGenerated = (timeline) => (timeline.track(0).record ? 1 : 0);
 
 test('every catalog song is a generated style with a complete registration', () => {
   assert.deepEqual(TRACK_IDS, [1, 2, 3, 4, 5]);
@@ -48,9 +51,10 @@ for (const id of STYLE_IDS)
       backward.plan(1500);
       const second = [...bars].reverse().map((bar) => JSON.stringify(backward.plan(bar)));
       assert.deepEqual(first, second.reverse());
+      const generated = firstGenerated(forward);
       assert.notEqual(
-        JSON.stringify(timelineOf(id, seed + 1).track(0).loops),
-        JSON.stringify(forward.track(0).loops),
+        JSON.stringify(timelineOf(id, seed + 1).track(generated).loops),
+        JSON.stringify(forward.track(generated).loops),
         'another seed is another set',
       );
     }
@@ -65,8 +69,10 @@ for (const id of STYLE_IDS)
       for (let index = 0; index < 16; index++) {
         const track = timeline.track(index),
           print = JSON.stringify([track.pc, track.loops.hookA, track.loops.bass]);
-        assert(!prints.has(print), `${id} track ${index} repeats an earlier one`);
-        prints.add(print);
+        if (!track.record) {
+          assert(!prints.has(print), `${id} track ${index} repeats an earlier one`);
+          prints.add(print);
+        }
         if (previous) assert.notEqual(track.pc, previous.pc, 'every track moves to a new key');
         previous = track;
       }
@@ -87,6 +93,7 @@ for (const id of STYLE_IDS)
     for (let index = 0; index < 10; index++) {
       const track = timeline.track(index),
         types = track.sections.map((section) => section.type);
+      if (track.record) continue;
       assert.equal(types[0], 'INTRO');
       assert.equal(types.at(-1), 'OUTRO');
       assert.equal(types.filter((type) => type === 'DROP').length, 2);
@@ -138,9 +145,11 @@ for (const id of STYLE_IDS)
 for (const id of STYLE_IDS)
   test(`${id}: bar plans start each loop where its layer comes in, and builds end in silence`, () => {
     const timeline = timelineOf(id, 42),
-      track = timeline.track(0),
+      index = firstGenerated(timeline),
+      track = timeline.track(index),
+      start = timeline.locate(index ? timeline.track(0).length : 0).start,
       covered = {};
-    for (let bar = 0; bar < track.length; bar++) {
+    for (let bar = start; bar < start + track.length; bar++) {
       const plan = timeline.plan(bar);
       for (const entry of plan.stems) {
         assert(entry.bars >= 1 && entry.offset >= 0 && entry.offset < track.cycleBars);
@@ -148,8 +157,12 @@ for (const id of STYLE_IDS)
         covered[entry.layer] = bar + entry.bars;
       }
       for (const name of ['bass', 'hook', 'arp', 'stab', 'pad'])
-        if (plan.on[name])
+        if (plan.on[name]) {
           assert(covered[name] > bar, `${id} bar ${bar}: ${name} has a loop playing`);
+          // Music that begins in this bar can pick up every loop that is already under way.
+          const entry = [...plan.stems, ...plan.joins].find((e) => e.layer === name);
+          assert(entry && entry.offset === (bar - start) % track.cycleBars);
+        }
       if (plan.dropout) {
         assert.equal(plan.sec, 'BUILD');
         assert.equal(plan.bs, plan.len - 1);
@@ -255,87 +268,173 @@ test('merge feedback is immediate while musical rewards coalesce and retry prese
   assert(audio.playing);
 });
 
-test('the sung song comes back every other track, always in E minor over Em C G D', () => {
-  const style = STYLES.pals.vocal;
+const RECORD = STYLES.pals.record;
+
+test('the recorded song comes back every other track, in A minor, with its measured form', () => {
   for (const seed of SEEDS) {
     const timeline = timelineOf('pals', seed);
+    let bar = 0;
     for (let index = 0; index < 8; index++) {
       const track = timeline.track(index);
-      assert.equal(track.sung, index % 2 === 0);
-      if (!track.sung) {
-        assert.equal(track.vocals.length, 0);
-        continue;
-      }
-      assert.equal(track.pc, 4);
-      assert.equal(track.scale, 'minor');
-      assert.deepEqual(
-        track.chords.map((chord) => chord.deg),
-        [0, 5, 2, 6],
-      );
-      assert.equal(track.chordBars, 2);
-      track.sections.forEach((section, i) => {
-        if (!(index === 0 && i === 0)) assert.equal(section.len, style.lengths[i]);
-      });
-      // Every phrase starts on a whole loop (lines follow the chords) and ends inside its section.
-      for (const cue of track.vocals) {
-        const section = track.sections.find((s) => cue.bar >= s.start && cue.bar < s.start + s.len);
-        assert(section, `${cue.phrase} at bar ${cue.bar} is inside a section`);
-        assert(cue.bar + cue.bars <= section.start + section.len);
-        if (cue.phrase !== 'hook')
-          assert.equal(cue.bar % 8, 0, 'a sung line starts with the chords');
-        assert(
-          VOCAL_FILES.includes(cue.phrase) && (!cue.harmony || VOCAL_FILES.includes(cue.harmony)),
+      assert.equal(!!track.record, index % 2 === 0);
+      if (track.record) {
+        assert.equal(track.pc, 9);
+        assert.equal(track.scale, 'minor');
+        assert.equal(track.length, 104);
+        assert.deepEqual(
+          track.sections.map((section) => [section.start, section.type]),
+          RECORD.sections,
         );
-      }
-      const lines = track.vocals.filter((cue) => cue.phrase !== 'hook');
-      for (let i = 1; i < lines.length; i++)
-        assert(lines[i].bar >= lines[i - 1].bar + lines[i - 1].bars, 'sung lines never overlap');
-      assert.deepEqual(
-        lines.filter(
-          (cue) =>
-            track.sections.find((s) => s.start <= cue.bar && cue.bar < s.start + s.len).type ===
-            'DROP',
-        ).length,
-        4,
-        'the chorus is sung twice in each drop',
-      );
+        assert.equal(
+          track.chords.map((chord) => chord.deg).join(''),
+          RECORD.chords,
+          'one chord per bar, as measured',
+        );
+        for (let local = 0; local < track.length; local++) {
+          const plan = timeline.plan(bar + local);
+          assert.equal(plan.record.file, 'all-my-pals.mp3');
+          assert.equal(plan.stems.length, 0);
+          assert(Object.values(plan.drums).every((row) => row.every((v) => v === 0)));
+          assert(
+            Object.values(plan.on).every((on) => !on),
+            'nothing generated plays over it',
+          );
+        }
+        assert(timeline.plan(bar + 10).record.sung && timeline.plan(bar + 60).record.sung);
+        assert(timeline.plan(bar + 30).record.kick && !timeline.plan(bar + 60).record.kick);
+      } else assert.notEqual(track.pc, 9, 'a generated track moves away from the song key');
+      bar += track.length;
     }
   }
 });
 
-test('the synth lead makes room while the voice sings, and the plan cues every phrase', () => {
-  const timeline = timelineOf('pals', 42),
-    track = timeline.track(0),
-    start = timeline.locate(0).start;
-  let cued = 0;
-  for (let local = 0; local < track.length; local++) {
-    const plan = timeline.plan(start + local);
-    cued += plan.vocals.length;
-    if (plan.singing && plan.sec !== 'BUILD') assert.equal(plan.on.hook, false, `bar ${local}`);
-    for (const cue of plan.vocals)
-      assert(track.vocals.some((v) => v.bar === local && v.phrase === cue.phrase));
+test('the measured song data is complete and fits inside its file', () => {
+  const marks = RECORD.bars;
+  assert.equal(marks.length, 105);
+  for (let i = 1; i < marks.length; i++) {
+    const bpm = 240 / (marks[i] - marks[i - 1]);
+    assert(bpm > 135 && bpm < 138.5, `bar ${i - 1}: ${bpm.toFixed(2)} BPM`);
   }
-  assert.equal(cued, track.vocals.length);
+  assert.equal(RECORD.chords.length, 104);
+  assert.match(RECORD.chords, /^[0-6]+$/);
+  assert.equal(RECORD.sections[0][0], 0);
+  RECORD.sections.forEach(([start], i) => i && assert(start > RECORD.sections[i - 1][0]));
+  for (const [from, to] of [...RECORD.kick, ...RECORD.sung]) assert(from < to && to <= 104);
+  // The file's length, from its MPEG frames: the last bar ends just before the song does.
+  const data = fs.readFileSync(new URL('../assets/music/all-my-pals.mp3', import.meta.url));
+  let at = data[0] === 0x49 && data[1] === 0x44 && data[2] === 0x33 ? 10 : 0;
+  if (at)
+    at +=
+      ((data[6] & 127) << 21) | ((data[7] & 127) << 14) | ((data[8] & 127) << 7) | (data[9] & 127);
+  const KBPS = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320],
+    RATES = [44100, 48000, 32000];
+  let frames = 0,
+    rate = 0;
+  while (at + 4 <= data.length && data[at] === 0xff && (data[at + 1] & 0xfe) === 0xfa) {
+    const kbps = KBPS[data[at + 2] >> 4];
+    rate = RATES[(data[at + 2] >> 2) & 3];
+    if (!kbps) break;
+    at += Math.floor((144000 * kbps) / rate) + ((data[at + 2] >> 1) & 1);
+    frames++;
+  }
+  // The first frame is the encoder's header, not sound.
+  const seconds = ((frames - 1) * 1152) / rate;
+  assert(seconds > 180, `${frames} frames`);
+  assert(marks.at(-1) < seconds && marks.at(-1) > seconds - 0.5, `${seconds.toFixed(2)} s`);
 });
 
-test('every sung phrase is on disk, as long as its bars at 138 BPM plus the lead-in and the tail', () => {
-  const song = JSON.parse(
-      fs.readFileSync(new URL('../tools/vocals/all-my-pals.json', import.meta.url)),
-    ),
-    s16 = 60 / song.bpm / 4;
-  assert.equal(song.bpm, STYLES.pals.bpm[0]);
-  assert.equal(song.pre, STYLES.pals.vocal.pre);
-  for (const name of VOCAL_FILES) {
-    const data = fs.readFileSync(new URL(`../assets/vocals/${name}.wav`, import.meta.url)),
-      view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-    assert.equal(String.fromCharCode(...data.subarray(0, 4)), 'RIFF');
-    const rate = view.getUint32(24, true),
-      bits = view.getUint16(34, true),
-      seconds = (data.byteLength - 44) / (rate * (bits / 8)),
-      phrase = song.phrases[name.replace('-low', '')],
-      expected = song.pre + phrase.bars * 16 * s16;
-    assert.equal(rate, 22050);
-    assert(seconds > expected && seconds < expected + 1.5, `${name}: ${seconds.toFixed(2)} s`);
-    if (!name.endsWith('-low')) assert.equal(STYLES.pals.vocal.phrases[name], phrase.bars);
+test('the clock follows the recording bar by bar, and generated tracks keep their tempo', () => {
+  const session = composeGenSession('pals', 42, null),
+    timeline = createTimeline(session),
+    marks = RECORD.bars;
+  for (let bar = 0; bar <= 104; bar++)
+    assert(Math.abs(timeline.secondsAt(bar * 16) - (marks[bar] - marks[0])) < 1e-9);
+  const next = timeline.secondsAt(104 * 16);
+  for (const steps of [1, 16, 160, 999])
+    assert(Math.abs(timeline.secondsAt(104 * 16 + steps) - next - steps * session.s16) < 1e-9);
+  let previous = -Infinity;
+  for (let step = 0; step < 16 * 600; step += 3.5) {
+    const seconds = timeline.secondsAt(step);
+    assert(seconds > previous, 'time only moves forward');
+    previous = seconds;
+    assert(Math.abs(timeline.stepAt(seconds) - step) < 1e-6, `step ${step}`);
+  }
+  const plain = createTimeline(composeGenSession('rave', 42, null)),
+    s16 = composeGenSession('rave', 42, null).s16;
+  for (const step of [0, 5, 1000, 54321])
+    assert(Math.abs(plain.secondsAt(step) - step * s16) < 1e-9);
+});
+
+test('the engine starts the song with its first bar, or joins it on a beat where the music is', async () => {
+  const context = fakeContext(),
+    starts = [],
+    // A decoder that keeps 10 ms more of the encoder's lead-in than the measurements assume.
+    lead = 0.01,
+    buffer = {
+      duration: 182.78,
+      sampleRate: 2000,
+      length: 365560,
+      numberOfChannels: 1,
+      getChannelData: () =>
+        Float32Array.from({ length: 2000 }, (_, k) =>
+          k >= (RECORD.onset + lead) * 2000 ? 0.5 : 0,
+        ),
+    },
+    realFetch = globalThis.fetch;
+  context.decodeAudioData = async () => buffer;
+  const createBufferSource = context.createBufferSource;
+  context.createBufferSource = () => {
+    const node = createBufferSource();
+    node.start = (when, offset) => starts.push({ node, when, offset });
+    return node;
+  };
+  globalThis.fetch = async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(8) });
+  try {
+    for (const late of [false, true]) {
+      starts.length = 0;
+      const audio = createAudioState();
+      audio.trackId = TRACK_IDS.find((id) => TRACKS[id].style === 'pals');
+      audio.context = context;
+      audio.stemFlash = {};
+      const record = context.createGain(),
+        audioComposition = createAudioComposition({ audio });
+      audio.session = audioComposition.composeSession(42);
+      audio.graph = { song: { record, extras: [], layers: null } };
+      const play = createAudioGen(
+          {
+            audio,
+            audioComposition,
+            audioInstruments: new Proxy({}, { get: () => () => {} }),
+          },
+          'pals',
+        ).scheduleStep,
+        time = (step) => 1 + audioComposition.secondsAt(step);
+      if (!late) await play.prepare(0, 0);
+      play(0, time(0));
+      if (late) {
+        assert.equal(starts.length, 0, 'not ready yet: nothing starts');
+        await new Promise((resolve) => setTimeout(resolve));
+        for (let step = 1; step < 8; step++) play(step, time(step));
+        assert.equal(starts.length, 1, 'it joins on the next beat');
+        const marks = RECORD.bars;
+        assert(Math.abs(starts[0].when - time(4)) < 1e-9);
+        assert(Math.abs(starts[0].offset - (marks[0] + (marks[1] - marks[0]) / 4 + lead)) < 1e-6);
+      } else {
+        assert.equal(starts.length, 1);
+        // The first downbeat, in this decoder's timing, sounds on the clock's first step.
+        const { when, offset } = starts[0];
+        assert(Math.abs(when + RECORD.bars[0] + lead - offset - time(0)) < 1e-6);
+        assert(when <= time(0) - RECORD.bars[0], 'with its lead-in');
+      }
+      for (let step = 8; step < 64; step++) play(step, time(step));
+      assert.equal(starts.length, 1, 'it is started once');
+      const source = starts[0].node;
+      assert(audio.graph.song.extras.includes(source), 'a new song stops it');
+      assert(source.edges[0].edges.includes(record));
+      source.onended();
+      assert(!audio.graph.song.extras.includes(source));
+    }
+  } finally {
+    globalThis.fetch = realFetch;
   }
 });

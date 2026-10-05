@@ -19,9 +19,24 @@ export function createAudioComposition({ audio }) {
   const planAt = (bar) => timelineOf().plan(Math.max(0, Math.floor(bar)));
   const sectionAt = (bar) => timelineOf().sectionAt(Math.max(0, Math.floor(bar)));
   const chordFor = (bar) => timelineOf().chordAt(Math.max(0, Math.floor(bar)));
+  // The clock: seconds from the start of the song to a step, and back (see gen/set.js).
+  const secondsAt = (step) => timelineOf().secondsAt(step);
+  const stepAt = (seconds) => timelineOf().stepAt(seconds);
+  /** The bar that sounds a number of seconds into the song (a bar's own start counts as in it). */
+  const barAt = (seconds) => Math.max(0, Math.floor(stepAt(seconds) / 16 + 1e-6));
   const LOOK = 0.24;
   function composeSession(seed, tonal) {
     return SONG_STYLES[tonal?.style || TRACKS[audio.trackId].style].compose(seed, tonal);
   }
-  return { sectionAt, planAt, chordFor, LOOK, composeSession, timeline: timelineOf };
+  return {
+    sectionAt,
+    planAt,
+    chordFor,
+    secondsAt,
+    stepAt,
+    barAt,
+    LOOK,
+    composeSession,
+    timeline: timelineOf,
+  };
 }

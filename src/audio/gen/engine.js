@@ -1,7 +1,7 @@
 import { createAudioMath } from '../math.js';
 import { sweepFor } from '../sweep.js';
 import { stemsFor } from '../stems.js';
-import { vocalsFor } from '../vocals.js';
+import { recordsFor } from '../records.js';
 import { STYLES } from './styles.js';
 
 /** Which kit kick each style uses. */
@@ -30,7 +30,8 @@ const cutoff = (layer, v) => {
 /**
  * Plays a generated set. The drums are struck live from the kit, step by step; the melodic layers
  * are loops rendered ahead of time (`stems.js`), started at the bar where they come in and shaped
- * as they play by each layer's filter and sends, the way a producer automates a track.
+ * as they play by each layer's filter and sends, the way a producer automates a track. A style's
+ * recorded song (`records.js`) is played as it is, between the generated tracks.
  */
 export function createAudioGen(
   { audio, audioComposition, audioInstruments: I, audioMath = createAudioMath(audio) },
@@ -39,18 +40,74 @@ export function createAudioGen(
   const style = STYLES[id],
     { mix } = style,
     stems = stemsFor(audio),
-    vocals = style.vocal ? vocalsFor(audio) : null;
+    records = style.record ? recordsFor(audio) : null;
+  /** The recorded song that is playing: on which song bus, for which track, from which source. */
+  let playing = null;
+  /** The last bar started, so a bar that does not follow it (a new song, music switched back on) is known. */
+  let last = { session: null, bar: -1 };
 
-  /** Gets the rendered loops of the tracks around a bar going. */
+  /** Gets the rendered loops (or the recorded song) of the tracks around a bar going. */
   function warm(bar) {
     const timeline = audioComposition.timeline(),
       { index, local } = timeline.locate(bar),
       track = timeline.track(index),
-      ready = [stems.prepare(audio.session, track)];
-    if (vocals && audio.context?.decodeAudioData) ready.push(vocals.load(audio.context));
-    if (local >= track.length - 40)
-      ready.push(stems.prepare(audio.session, timeline.track(index + 1)));
+      ready = [prepare(track)];
+    if (local >= track.length - 40) ready.push(prepare(timeline.track(index + 1)));
     return Promise.all(ready);
+  }
+  function prepare(track) {
+    if (!track.record) return stems.prepare(audio.session, track);
+    if (!records || !audio.context?.decodeAudioData) return Promise.resolve();
+    return records.load(audio.session, audio.context, track.record);
+  }
+
+  /**
+   * Keeps the recorded song playing through its bars. It starts with its first bar, the moment
+   * before the downbeat included; if it was not ready by then, it joins on a later beat, where the
+   * music has got to. It plays untouched: the clock follows its bars (see gen/set.js).
+   */
+  function keepRecord(plan, step, t) {
+    const song = audio.graph.song;
+    if (!song?.record || (playing?.song === song && playing.track === plan.track)) return;
+    const loaded = records?.get(audio.session, plan.record.file);
+    if (!loaded) return;
+    const { buffer, lead } = loaded,
+      marks = style.record.bars,
+      si = step % 16,
+      first = plan.local === 0 && si === 0,
+      now = audio.context.currentTime,
+      // Where in the file this step is, in this decoder's timing.
+      at = marks[plan.local] + (si / 16) * (marks[plan.local + 1] - marks[plan.local]) + lead;
+    let when = Math.max(now, first ? t - marks[0] - lead : t),
+      offset = at + (when - t);
+    if (offset < 0) {
+      when -= offset;
+      offset = 0;
+    }
+    if (offset > buffer.duration - 1) return;
+    const source = audio.context.createBufferSource(),
+      fader = audio.context.createGain();
+    source.buffer = buffer;
+    source.connect(fader);
+    fader.connect(song.record);
+    // Joining a song that is already under way: a short fade, so it does not start with a click.
+    if (offset > 0.05) {
+      fader.gain.setValueAtTime(0, when);
+      fader.gain.linearRampToValueAtTime(1, when + 0.03);
+    }
+    source.start(when, offset);
+    // A new song (or a restart) stops it with the rest of the old song's buses.
+    song.extras.push(source, fader);
+    source.onended = () => {
+      source.disconnect();
+      fader.disconnect();
+      for (const node of [source, fader]) {
+        const i = song.extras.indexOf(node);
+        if (i >= 0) song.extras.splice(i, 1);
+      }
+      if (playing?.source === source) playing = null;
+    };
+    playing = { song, track: plan.track, source };
   }
 
   function startBar(plan, t) {
@@ -60,9 +117,16 @@ export function createAudioGen(
       barTime = 16 * session.s16,
       song = audio.graph.song;
     warm(plan.bar);
+    const joining = last.session !== session || last.bar !== plan.bar - 1;
+    last = { session, bar: plan.bar };
+    // The recorded song brings its own builds and drops; none of the set's sweeps or effects.
+    if (plan.record) {
+      if (plan.local === 0) I.eSweep(t, sweepFor('DROP', 0));
+      return;
+    }
 
-    // Loops that come in (or start over) in this bar.
-    for (const entry of plan.stems) {
+    // Loops that come in (or start over) in this bar; where the music begins, those under way too.
+    for (const entry of joining ? [...plan.stems, ...plan.joins] : plan.stems) {
       const buffer = stems.get(session, track, entry.stem),
         layer = song.layers?.[entry.layer];
       if (!buffer || !layer) continue;
@@ -87,38 +151,11 @@ export function createAudioGen(
       else audio.stemFlash.synth = 0.2;
     }
 
-    // Sung phrases: each file starts a little before its bar, so breaths and first consonants land
-    // ahead of the beat as a singer's do. The harmony, where there is one, sits under the lead.
-    if (vocals && song.vocal)
-      for (const cue of plan.vocals)
-        for (const [name, level] of [
-          [cue.phrase, 1],
-          [cue.harmony, 0.55],
-        ]) {
-          const buffer = name && vocals.get(audio.context, name);
-          if (!buffer) continue;
-          const source = audio.context.createBufferSource(),
-            gain = audio.context.createGain(),
-            at = t - style.vocal.pre;
-          source.buffer = buffer;
-          gain.gain.value = level;
-          source.connect(gain);
-          gain.connect(song.vocal);
-          const offset = Math.max(0, audio.context.currentTime - at);
-          source.start(Math.max(at, audio.context.currentTime), offset);
-          source.onended = () => {
-            source.disconnect();
-            gain.disconnect();
-          };
-        }
-
     // Filter and send automation through the bar.
     const hype = Math.min(1, audio.hype || 0);
     if (song.layers)
       for (const [name, layer] of Object.entries(song.layers)) {
-        // While the voice sings, the pads, arpeggio and stabs step back so the words stay clear.
-        const space = plan.singing && name !== 'bass' ? 0.6 : 1;
-        layer.input.gain.setTargetAtTime(style.stems[name] * space, t, 0.08);
+        layer.input.gain.setTargetAtTime(style.stems[name], t, 0.08);
         const [from, to] = plan.auto[name],
           boost = name === 'hook' || name === 'arp' ? 0.08 * hype : 0;
         layer.filter.frequency.setValueAtTime(cutoff(name, from + boost), t);
@@ -137,7 +174,6 @@ export function createAudioGen(
     if (fx.downlifter) I.eDownlifter(t, 2 * barTime, 0.05);
     if (fx.swell) I.eSwell(t + 8 * s16, 8 * s16, 0.06);
     I.eSpace(t, plan.sec === 'BREAK' ? 1.6 : plan.sec === 'BUILD' ? 1.25 : 1);
-    if (song.vocalRv) song.vocalRv.gain.setTargetAtTime(0.18 + 0.3 * plan.auto.reverb, t, 0.3);
   }
 
   function scheduleStep(step, t) {
@@ -153,8 +189,13 @@ export function createAudioGen(
     audio.bar = bar;
     audio.section = plan.sec;
     audio.key = plan.key;
+    audio.onRecord = !!plan.record;
     if (si === 0) startBar(plan, t);
-    if (plan.singing && vocals?.get(audio.context, 'chorus')) audio.stemFlash.vocal = 0.25;
+    if (plan.record) {
+      if (si % 4 === 0) keepRecord(plan, step, t);
+      if (playing?.track === plan.track) flashRecord(plan.record, si);
+      return;
+    }
     if (si % 4 === 0 && !(plan.dropout && si >= 12))
       I.eSweep(t, sweepFor(plan.sec, (plan.bs + si / 16) / plan.len));
 
@@ -180,6 +221,15 @@ export function createAudioGen(
     if (d.perc[si] > 0) perc(ts + drift, d.perc[si], si);
     if (d.snare[si] > 0) I.eSnare(ts, 0.05 * d.snare[si], 0.95 + 0.4 * plan.progress);
     if (d.tom[si] > 0) I.eTom(ts, 200 - 14 * (si - 12), 0.14 * d.tom[si]);
+  }
+
+  /** The music meter follows the recorded song from what was measured of it. */
+  function flashRecord(record, si) {
+    const flash = audio.stemFlash;
+    if (record.kick && si % 4 === 0) flash.kick = flash.bass = 0.16;
+    if (record.kick && si % 2 === 0) flash.drums = 0.12;
+    if (si % 8 === 0) flash.synth = 0.2;
+    if (record.sung) flash.vocal = 0.25;
   }
 
   /** Percussion between the drums, in each style's colour. */

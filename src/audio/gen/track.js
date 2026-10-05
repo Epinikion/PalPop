@@ -55,27 +55,36 @@ const MOVES = {
   ],
 };
 
-/** Whether a track of a set is its sung one (styles with vocals alternate sung and instrumental tracks). */
-export const isVocal = (session, index) => {
-  const vocal = STYLES[session.style].vocal;
-  return !!vocal && index % vocal.every === 0;
+/** Whether a track of a set is the style's recorded song (styles with one alternate it with generated tracks). */
+export const isRecord = (session, index) => {
+  const record = STYLES[session.style].record;
+  return !!record && index % record.every === 0;
 };
 
 /** The length of every section of a track; cheap, so the set can place tracks without composing them. */
 export function formOf(session, index) {
-  const style = STYLES[session.style],
-    seed = hash(session.seed, session.style, 'track', index),
-    sung = isVocal(session, index);
+  const style = STYLES[session.style];
+  // A recorded song has its own form: its sections as they were measured from the recording.
+  if (isRecord(session, index)) {
+    const { sections, bars } = style.record,
+      length = bars.length - 1;
+    return {
+      sections: sections.map(([start, type], i) => ({
+        index: i,
+        type,
+        start,
+        len: (sections[i + 1]?.[0] ?? length) - start,
+        variant: 'A',
+        spec: { type, layers: [], auto: {} },
+      })),
+      length,
+    };
+  }
+  const seed = hash(session.seed, session.style, 'track', index);
   let start = 0;
   const sections = style.form.map((spec, i) => {
     // The first track of a session opens quickly: a game should not wait half a minute for music.
-    // A sung track has a fixed form, because its phrases were sung for it.
-    const len =
-        index === 0 && spec.type === 'INTRO'
-          ? 8
-          : sung
-            ? style.vocal.lengths[i]
-            : pick(spec.len, seed, 'len', i),
+    const len = index === 0 && spec.type === 'INTRO' ? 8 : pick(spec.len, seed, 'len', i),
       section = { index: i, type: spec.type, start, len, variant: spec.variant || 'A', spec };
     start += len;
     return section;
@@ -91,26 +100,18 @@ export function formOf(session, index) {
  */
 export function composeTrack(session, index, previousPc) {
   const style = STYLES[session.style],
-    seed = hash(session.seed, session.style, 'track', index),
-    first = index === 0,
-    sung = isVocal(session, index),
-    pc = sung
-      ? style.vocal.pc
-      : first
-        ? session.pc
-        : pick(
-            style.keys.filter((key) => key !== previousPc),
-            seed,
-            'key',
-          ),
-    scale = sung
-      ? style.vocal.scale
-      : first
-        ? session.scale
-        : weighted(style.scales, seed, 'scale'),
-    [degrees, chordBars] = sung
-      ? style.vocal.progression
-      : pick(style.progressions, seed, 'progression'),
+    seed = hash(session.seed, session.style, 'track', index);
+  if (isRecord(session, index)) return recordTrack(session, index, seed);
+  const first = index === 0,
+    pc = first
+      ? session.pc
+      : pick(
+          style.keys.filter((key) => key !== previousPc),
+          seed,
+          'key',
+        ),
+    scale = first ? session.scale : weighted(style.scales, seed, 'scale'),
+    [degrees, chordBars] = pick(style.progressions, seed, 'progression'),
     cycleBars = degrees.length * chordBars,
     steps = cycleBars * 16,
     note = (degree, base) => degreeNote(pc, scale, degree, base);
@@ -257,17 +258,6 @@ export function composeTrack(session, index, previousPc) {
   );
 
   const { sections, length } = formOf(session, index);
-  // The sung phrases of a sung track: where each starts (bar in the track) and how long it lasts.
-  const vocals = sung
-    ? sections.flatMap((section, i) =>
-        style.vocal.cues[i].map(([bar, phrase, harmony]) => ({
-          bar: section.start + bar,
-          phrase,
-          harmony: harmony || null,
-          bars: style.vocal.phrases[phrase],
-        })),
-      )
-    : [];
   return {
     index,
     seed,
@@ -295,8 +285,42 @@ export function composeTrack(session, index, previousPc) {
     },
     sections,
     length,
-    sung,
-    vocals,
+    record: null,
+  };
+}
+
+/**
+ * The recorded song as a track of the set: nothing to compose, only what the rest of the game asks
+ * of a track - its key, the chord of every bar (voiced like a generated track's, for gameplay
+ * replies that fit the music), its sections and its length.
+ */
+function recordTrack(session, index, seed) {
+  const style = STYLES[session.style],
+    record = style.record,
+    { sections, length } = formOf(session, index),
+    note = (degree, base) => degreeNote(record.pc, record.scale, degree, base);
+  let previous = null;
+  const chords = [...record.chords].map((symbol, bar) => {
+    const deg = Number(symbol),
+      notes = leadVoices(previous, [note(deg, 48), note(deg + 2, 48), note(deg + 4, 48)], 52, 72);
+    previous = notes;
+    return { deg, start: bar * 16, bars: 1, notes, root: note(deg, 0) % 12 };
+  });
+  return {
+    index,
+    seed,
+    style: session.style,
+    pc: record.pc,
+    scale: record.scale,
+    cycleBars: length,
+    chordBars: 1,
+    chords,
+    loops: { bass: [], hookA: [], hookB: [], arp: [], stab: [], pad: [] },
+    rows: null,
+    sound: style.sound,
+    sections,
+    length,
+    record,
   };
 }
 

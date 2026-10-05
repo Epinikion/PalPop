@@ -14,7 +14,10 @@ import { TRACKS, TRACK_IDS } from '../src/audio/catalog.js';
 const TAIL = 6;
 
 /** Builds the real graph, voices and output chain on an OfflineAudioContext. */
-export function createRig(style, { seed = 42, sampleRate = 24000, bars = 0, seconds = 10 } = {}) {
+export function createRig(
+  style,
+  { seed = 42, sampleRate = 24000, bar = 0, bars = 0, seconds = 10 } = {},
+) {
   const audio = createAudioState();
   audio.trackId = TRACK_IDS.find((id) => TRACKS[id].style === style);
   if (!audio.trackId) throw new Error(`Unknown preview style ${style}`);
@@ -25,7 +28,10 @@ export function createRig(style, { seed = 42, sampleRate = 24000, bars = 0, seco
   audio.effectsVolume = 55;
   const audioComposition = createAudioComposition({ audio });
   audio.session = audioComposition.composeSession(audio.seed);
-  if (bars) seconds = bars * 16 * audio.session.s16 + TAIL;
+  // The set's clock says how long the bars last (a recorded song keeps its own tempo).
+  if (bars)
+    seconds =
+      audioComposition.secondsAt((bar + bars) * 16) - audioComposition.secondsAt(bar * 16) + TAIL;
   audio.context = new OfflineAudioContext(2, Math.ceil(seconds * sampleRate), sampleRate);
   const context = audio.context;
   audio.master = createAudioOutput(context);
@@ -54,7 +60,7 @@ export async function renderOffline(
   bars = 4,
   { seed = 42, gameplay = false, sampleRate = 24000, masterGain, solo } = {},
 ) {
-  const rig = createRig(style, { seed, sampleRate, bars });
+  const rig = createRig(style, { seed, sampleRate, bar, bars });
   const { audio, context, audioComposition, audioMath, audioGraph } = rig;
   let { audioInstruments } = rig;
   // Calibration hooks for scripted analysis: override the makeup gain, or mute all but some voices.
@@ -66,7 +72,7 @@ export async function renderOffline(
         solo.includes(name) ? voice : () => {},
       ]),
     );
-  const seconds = bars * 16 * audio.session.s16 + TAIL;
+  const seconds = context.length / context.sampleRate;
   const game = { phase: 'play', goldTime: 0, comboCount: 0, iceTime: 0, danger: false },
     arrangements = createArrangements({
       audio,
@@ -75,7 +81,7 @@ export async function renderOffline(
       audioMath,
       audioInstruments,
     });
-  audio.songStart = 0.1 - bar * 16 * audio.session.s16;
+  audio.songStart = 0.1 - audioComposition.secondsAt(bar * 16);
   // The melodic loops are rendered ahead of time, as they are while the game runs.
   await arrangements[style].prepare?.(bar, bar + bars);
   const gameAudio = createGameAudio({ audio, audioComposition, audioGraph, audioMath });
@@ -179,7 +185,10 @@ export async function renderOffline(
     audio.context = context;
   } else {
     for (let step = 0; step < bars * 16; step++)
-      arrangements[style](bar * 16 + step, 0.1 + step * audio.session.s16);
+      arrangements[style](
+        bar * 16 + step,
+        audio.songStart + audioComposition.secondsAt(bar * 16 + step),
+      );
   }
   const buffer = await context.startRendering();
   let peak = 0,

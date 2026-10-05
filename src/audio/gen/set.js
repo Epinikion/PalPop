@@ -1,5 +1,5 @@
 import { STYLES } from './styles.js';
-import { composeTrack, drumRow, formOf } from './track.js';
+import { composeTrack, drumRow, formOf, isRecord } from './track.js';
 import { pick, unit } from './random.js';
 
 /** Which stem a layer plays (the hook has a lifted variant for the second drop). */
@@ -18,10 +18,17 @@ const FILLS = [
  * the set never plays the same track twice, while every track itself is built the way real tracks
  * are - loops that repeat and develop through its sections. Everything the engine plays in a bar is
  * a pure function of the bar (`plan(bar)`), and only a few tracks are held at a time.
+ *
+ * The set also keeps the clock: where every step falls in time. Generated tracks keep the session's
+ * tempo; a recorded song keeps its own, bar by bar as it was measured, so the music the game plays
+ * along with it stays on its beat.
  */
 export function createSet(session) {
   const style = STYLES[session.style],
+    record = style.record,
+    barTime = 16 * session.s16,
     starts = [0],
+    times = [0],
     keys = [],
     tracks = new Map(),
     plans = new Map();
@@ -33,6 +40,16 @@ export function createSet(session) {
       keys.push(k === 0 ? session.pc : trackFor(k, keys[k - 1]).pc);
     }
     return keys[index];
+  }
+  /** Places one more track: the bar and the second where the next one starts. */
+  function extend() {
+    const index = starts.length - 1,
+      length = formOf(session, index).length;
+    starts.push(starts[index] + length);
+    times.push(
+      times[index] +
+        (isRecord(session, index) ? record.bars[length] - record.bars[0] : length * barTime),
+    );
   }
   function trackFor(index, previousPc) {
     if (!tracks.has(index)) {
@@ -47,16 +64,31 @@ export function createSet(session) {
   /** The track a bar belongs to, and the bar inside it. */
   function locate(bar) {
     bar = Math.max(0, Math.floor(bar));
-    while (starts.at(-1) <= bar)
-      starts.push(starts.at(-1) + formOf(session, starts.length - 1).length);
-    let low = 0,
-      high = starts.length - 2;
-    while (low < high) {
-      const mid = (low + high + 1) >> 1;
-      if (starts[mid] <= bar) low = mid;
-      else high = mid - 1;
-    }
-    return { index: low, local: bar - starts[low], start: starts[low] };
+    while (starts.at(-1) <= bar) extend();
+    const index = last(starts, bar);
+    return { index, local: bar - starts[index], start: starts[index] };
+  }
+  /** Seconds from the start of the set to a step (a fraction of a step is allowed). */
+  function secondsAt(step) {
+    if (step <= 0) return step * session.s16;
+    const bar = Math.floor(step / 16),
+      { index, local } = locate(bar),
+      within = step / 16 - bar;
+    if (!isRecord(session, index)) return times[index] + (local + within) * barTime;
+    const marks = record.bars;
+    return times[index] + marks[local] - marks[0] + within * (marks[local + 1] - marks[local]);
+  }
+  /** The step (with its fraction) that sounds a number of seconds after the start of the set. */
+  function stepAt(seconds) {
+    if (seconds <= 0) return seconds / session.s16;
+    while (times.at(-1) <= seconds) extend();
+    const index = last(times, seconds),
+      into = seconds - times[index];
+    if (!isRecord(session, index)) return 16 * starts[index] + into / session.s16;
+    const marks = record.bars,
+      at = marks[0] + into,
+      bar = Math.min(last(marks, at), marks.length - 2);
+    return 16 * (starts[index] + bar) + (16 * (at - marks[bar])) / (marks[bar + 1] - marks[bar]);
   }
   function sectionOf(t, local) {
     let found = t.sections[0];
@@ -76,9 +108,6 @@ export function createSet(session) {
       (!half && (spec.early || []).includes(name))
     );
   }
-  /** Whether a sung line (not the short hook) is heard in a bar of a track. */
-  const singing = (t, local) =>
-    t.vocals.some((v) => v.phrase !== 'hook' && local >= v.bar && local < v.bar + v.bars);
   function layersAt(bar) {
     const { index, local } = locate(bar),
       t = track(index),
@@ -96,9 +125,7 @@ export function createSet(session) {
       'rumble',
       'roll',
     ])
-      on[name] = playing(name, section, bs);
-    // The synth lead makes room while the voice sings, the way a lead and a vocal take turns.
-    if (on.hook && singing(t, local) && section.type !== 'BUILD') on.hook = false;
+      on[name] = !t.record && playing(name, section, bs);
     return on;
   }
 
@@ -115,9 +142,7 @@ export function createSet(session) {
       cyc: index,
       track: index,
       progress: bs / section.len,
-      energy: { INTRO: 0.4, GROOVE: 0.65, BREAK: 0.3, BUILD: 0.75, DROP: 1, OUTRO: 0.45 }[
-        section.type
-      ],
+      energy: ENERGY[section.type],
     };
   }
   /** The chord that sounds in a bar, for gameplay replies that should fit the music. */
@@ -147,6 +172,7 @@ export function createSet(session) {
       row = (name) => drumRow(second ? t.rows[name].b : t.rows[name].a),
       empty = () => new Array(16).fill(0),
       drums = {};
+    if (t.record) return remember(recordPlan());
     for (const name of ['kick', 'hat', 'open', 'clap', 'ride'])
       drums[name] = on[name] ? row(name) : empty();
     const perc = drumRow(t.rows.perc.a);
@@ -171,12 +197,13 @@ export function createSet(session) {
     if (dropout) for (const name in drums) for (let i = 12; i < 16; i++) drums[name][i] = 0;
 
     // Melodic loops: which stem each playing layer starts in this bar, and from where in its loop.
-    const stems = [];
+    // `joins` are the loops already under way, for music that begins in the middle of them.
+    const stems = [],
+      joins = [];
     const cycleAt = local % t.cycleBars;
     for (const name of MELODIC) {
       if (!on[name]) continue;
       const before = bar > start ? layersAt(bar - 1)[name] : false;
-      if (cycleAt !== 0 && before) continue;
       let until = 1;
       while (
         until < t.cycleBars - cycleAt &&
@@ -184,7 +211,7 @@ export function createSet(session) {
         layersAt(bar + until)[name]
       )
         until++;
-      stems.push({
+      (cycleAt !== 0 && before ? joins : stems).push({
         layer: name,
         stem: name === 'hook' ? (section.variant === 'B' ? 'hookB' : 'hookA') : name,
         offset: cycleAt,
@@ -228,20 +255,48 @@ export function createSet(session) {
       dropout,
       drums,
       stems,
+      joins,
       auto,
       fx,
       fill,
       chord: chordAt(bar),
       key: { pc: t.pc, scale: t.scale },
-      // Sung phrases that start in this bar.
-      vocals: t.vocals
-        .filter((v) => v.bar === local)
-        .map(({ phrase, harmony, bars }) => ({ phrase, harmony, bars })),
-      singing: singing(t, local),
+      record: null,
     };
-    plans.set(bar, result);
-    if (plans.size > 32) plans.delete(plans.keys().next().value);
-    return result;
+    return remember(result);
+
+    /** A bar of the recorded song: the engine only has to keep it playing. */
+    function recordPlan() {
+      for (const name of ['kick', 'hat', 'open', 'clap', 'ride', 'perc', 'snare', 'tom'])
+        drums[name] = empty();
+      const inside = (ranges) => ranges.some(([from, to]) => local >= from && local < to);
+      return {
+        bar,
+        track: index,
+        local,
+        sec: type,
+        bs,
+        len,
+        variant: section.variant,
+        progress: bs / len,
+        on,
+        dropout: false,
+        drums,
+        stems: [],
+        joins: [],
+        auto: { reverb: 0.4 },
+        fx: {},
+        fill: 'none',
+        chord: chordAt(bar),
+        key: { pc: t.pc, scale: t.scale },
+        record: { file: t.record.file, kick: inside(t.record.kick), sung: inside(t.record.sung) },
+      };
+    }
+    function remember(result) {
+      plans.set(bar, result);
+      if (plans.size > 32) plans.delete(plans.keys().next().value);
+      return result;
+    }
   }
 
   return {
@@ -251,9 +306,35 @@ export function createSet(session) {
     layersAt,
     track,
     locate,
+    secondsAt,
+    stepAt,
     size: () => tracks.size + plans.size,
     feel: () => unit(session.seed, 'feel'),
   };
+}
+
+/** How much is going on in each kind of section, for the gameplay sounds. */
+const ENERGY = {
+  INTRO: 0.4,
+  GROOVE: 0.65,
+  VERSE: 0.6,
+  BREAK: 0.3,
+  CHORUS: 0.45,
+  BUILD: 0.75,
+  DROP: 1,
+  OUTRO: 0.45,
+};
+
+/** The last index of a sorted list whose value is at most `value`. */
+function last(list, value) {
+  let low = 0,
+    high = list.length - 1;
+  while (low < high) {
+    const mid = (low + high + 1) >> 1;
+    if (list[mid] <= value) low = mid;
+    else high = mid - 1;
+  }
+  return low;
 }
 
 /** `[value, weight]` entries as a flat list `pick` can draw from. */

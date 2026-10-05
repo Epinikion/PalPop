@@ -24,8 +24,7 @@ export function createGameAudio({ audio, audioComposition, audioGraph, audioMath
     maxVoices = 0;
   function currentChord(t) {
     if (!audio.session) return { notes: [48, 51, 55], bass: 36 };
-    const bar = Math.max(0, Math.floor((t - audio.songStart) / (audio.session.spb * 4)));
-    return audioComposition.chordFor(bar);
+    return audioComposition.chordFor(audioComposition.barAt(t - audio.songStart));
   }
   function voice(t, n, end, duration, level, texture, pan) {
     const oscillator = audio.context.createOscillator(),

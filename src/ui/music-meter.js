@@ -24,7 +24,9 @@ export function createUiMusicMeter({ audio, uiInterface }) {
         : S.kname + ' ' + S.mname;
     setTxt(
       '#liveMixState',
-      muted ? 'MUTED' : 'GENERATING \u00b7 ' + section + ' \u00b7 BAR ' + bar,
+      muted
+        ? 'MUTED'
+        : (audio.onRecord ? 'PLAYING' : 'GENERATING') + ' \u00b7 ' + section + ' \u00b7 BAR ' + bar,
     );
     setTxt('#liveClock', S.bpm + ' BPM \u00b7 ' + key);
     setTxt(

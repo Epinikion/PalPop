@@ -4,12 +4,15 @@ import { between, pick, weighted } from './random.js';
 
 const NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
-/** A session of one style: its tempo is fixed for the whole set, its first track's key and scale too. */
+/**
+ * A session of one style: its tempo is fixed for the whole set, its first track's key and scale too.
+ * A style with a recorded song opens with it, so the session starts in the song's key.
+ */
 export function composeGenSession(id, seed, tonal) {
   const style = STYLES[id],
     bpm = tonal?.bpm ?? between(style.bpm[0], style.bpm[1], seed, 'bpm'),
-    pc = tonal?.pc ?? pick(style.keys, seed, 'key'),
-    scale = tonal?.scale ?? weighted(style.scales, seed, 'scale');
+    pc = tonal?.pc ?? style.record?.pc ?? pick(style.keys, seed, 'key'),
+    scale = tonal?.scale ?? style.record?.scale ?? weighted(style.scales, seed, 'scale');
   return {
     seed,
     style: id,
@@ -43,6 +46,8 @@ export function createTimeline(session) {
     layersAt: set.layersAt,
     track: set.track,
     locate: set.locate,
+    secondsAt: set.secondsAt,
+    stepAt: set.stepAt,
     size: set.size,
   };
 }
