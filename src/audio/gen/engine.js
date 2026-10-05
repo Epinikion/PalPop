@@ -139,7 +139,11 @@ export function createAudioGen(
     for (const entry of joining ? [...plan.stems, ...plan.joins] : plan.stems) {
       const buffer = stems.get(session, track, entry.stem),
         layer = song.layers?.[entry.layer];
-      if (!buffer || !layer) continue;
+      if (!buffer || !layer) {
+        audio.loops.missing++;
+        continue;
+      }
+      audio.loops.started++;
       const source = audio.context.createBufferSource(),
         fader = audio.context.createGain(),
         span = entry.bars * barTime,

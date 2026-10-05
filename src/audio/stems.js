@@ -17,6 +17,8 @@ const TARGET_RMS = 0.12;
  */
 export function createStems() {
   const tracks = new Map();
+  /** Why the last loop could not be rendered, if one could not (shown in the Sound sheet). */
+  let failure = null;
   const keyOf = (session, track) => `${session.style}:${session.seed}:${track.index}`;
 
   async function render(session, track, stem) {
@@ -63,8 +65,9 @@ export function createStems() {
         for (const stem of ORDER) {
           try {
             entry.buffers[stem] = await render(session, track, stem);
-          } catch {
+          } catch (error) {
             entry.buffers[stem] = null;
+            failure = String(error?.message || error);
           }
         }
         entry.done = true;
@@ -76,7 +79,7 @@ export function createStems() {
   }
   /** A rendered loop, or null while it is not ready. */
   const get = (session, track, stem) => tracks.get(keyOf(session, track))?.buffers[stem] || null;
-  return { prepare, get, size: () => tracks.size };
+  return { prepare, get, size: () => tracks.size, failure: () => failure };
 }
 
 /** Scales a loop to the target RMS (measured where it sounds), never letting it peak above 0.95. */

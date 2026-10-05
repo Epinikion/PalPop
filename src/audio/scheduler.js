@@ -46,6 +46,7 @@ export function createAudioScheduler({
       audioComposition.LOOK,
     );
     audio.lastTick = now;
+    audio.ticks = (audio.ticks || 0) + 1;
     if (audio.nextStepTime < now) {
       const k = Math.max(0, Math.ceil(audioComposition.stepAt(now + 0.015 - audio.songStart)));
       audio.step = k;
@@ -54,7 +55,12 @@ export function createAudioScheduler({
     const on = audio.enabled && audio.volume > 0;
     if (on) {
       while (audio.nextStepTime < now + audio.look) {
-        arrangements[audio.session.style](audio.step, audio.nextStepTime);
+        // A step that fails loses its notes, never the clock: the music goes on with the next one.
+        try {
+          arrangements[audio.session.style](audio.step, audio.nextStepTime);
+        } catch (error) {
+          audio.fault = { message: String(error?.message || error), step: audio.step };
+        }
         audio.step++;
         audio.nextStepTime = audio.songStart + audioComposition.secondsAt(audio.step);
       }

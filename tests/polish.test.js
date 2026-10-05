@@ -5,7 +5,7 @@ import { createStorage } from '../src/core/storage.js';
 import { CH_MAX, W } from '../src/config.js';
 import { createRenderText } from '../src/render/text.js';
 import { HINTS, learnHint, loadHints, pickHint } from '../src/game/hints.js';
-import { adaptLook } from '../src/audio/scheduler.js';
+import { adaptLook, createAudioScheduler } from '../src/audio/scheduler.js';
 import { hasHomeBar } from '../src/ui/viewport.js';
 
 const memory = () => {
@@ -90,6 +90,38 @@ test('the look-ahead widens after a late tick and relaxes while ticks are on tim
   let look = 0.6;
   for (let i = 0; i < 2000; i++) look = adaptLook(look, 0.035, base);
   assert.equal(look, base, 'back to normal after a stretch of steady ticks');
+});
+
+test('a step that throws loses its notes, not the clock', () => {
+  const played = [],
+    audio = {
+      context: { state: 'running', currentTime: 0.9 },
+      graph: {},
+      session: { style: 'x', spb: 0.4, s16: 0.1 },
+      playing: { live: true },
+      enabled: true,
+      volume: 80,
+      songStart: 0,
+      nextStepTime: 0,
+      step: 0,
+      lastTick: -1,
+      pendingFx: [],
+      pendingHits: [],
+    },
+    audioComposition = { LOOK: 0.24, stepAt: (s) => s / 0.1, secondsAt: (k) => k * 0.1 },
+    arrangements = {
+      x: (step) => {
+        if (step === 11) throw new Error('broken voice');
+        played.push(step);
+      },
+    },
+    { musicTick } = createAudioScheduler({ audio, audioComposition, arrangements });
+  musicTick();
+  audio.context.currentTime = 1.2;
+  musicTick();
+  assert.deepEqual(audio.fault, { message: 'broken voice', step: 11 });
+  assert.ok(played.includes(10) && played.includes(12), 'the steps around it still play');
+  assert.ok(audio.step > 14, 'and the clock keeps going');
 });
 
 test('the manifest ships padded maskable icons that the offline cache carries', () => {

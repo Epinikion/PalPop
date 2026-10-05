@@ -34,6 +34,10 @@ export function createAudioState(storage = store) {
   audio.lyricCues = [];
   /** The kicks scheduled lately, `{ t, v }`, which the board's beat mode follows. */
   audio.beats = [];
+  /** For the Sound sheet's audio line: scheduler ticks so far, the last step that failed, loops. */
+  audio.ticks = 0;
+  audio.fault = null;
+  audio.loops = { started: 0, missing: 0 };
   audio.bar = 0;
   audio.hype = 0;
   audio.seed = (Math.random() * 0xffffffff) >>> 0;

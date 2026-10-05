@@ -200,6 +200,7 @@ export function createAudioGraph({ audio }) {
     conv.connect(rvOut);
     rvOut.connect(audio.musIn);
     audio.graph = {
+      bus: glue,
       gLP,
       gG,
       dlIn,

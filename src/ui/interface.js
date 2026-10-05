@@ -6,6 +6,7 @@ import { BADGE_XP, badgeRows } from '../game/badges.js';
 import { dailyMutator } from '../game/mutators.js';
 import { store } from '../core/storage.js';
 import { isStandalone, readInsets } from './viewport.js';
+import { audioReport } from '../audio/diagnostics.js';
 import { fmt, fmtK } from '../core/math.js';
 export function createUiInterface({
   audio,
@@ -263,15 +264,27 @@ export function createUiInterface({
       `LVH ${lvh} / APP ${Math.round(app.width)}X${Math.round(app.height)} / INSET ${top}+${bottom} / ` +
       (isStandalone() ? 'INSTALLED' : 'BROWSER');
   }
+  // And one about the music, kept up to date while the sheet is open, to see what a phone's audio does.
+  let audioTimer = 0,
+    lastReport = null;
+  function audioInfo() {
+    lastReport = audioReport(audio, lastReport);
+    $('#audioInfo').textContent = lastReport.text;
+  }
   function openRadio() {
     audioRuntime.initAudio();
     viewInfo();
+    lastReport = null;
+    audioInfo();
+    clearInterval(audioTimer);
+    audioTimer = setInterval(audioInfo, 1000);
     radio.hidden = false;
     game.paused = true;
     renderRadio();
     openDialog(radio);
   }
   function closeRadio() {
+    clearInterval(audioTimer);
     radio.hidden = true;
     game.paused = false;
     closeDialog();
