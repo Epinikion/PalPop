@@ -2,5 +2,7 @@ node_modules/
 .cache/
 test-results/
 
-# Exported audio previews
+# Exported audio previews (the sung phrases of the game are part of it)
 *.wav
+!assets/vocals/*.wav
+__pycache__/
