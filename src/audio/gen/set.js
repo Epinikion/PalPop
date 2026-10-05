@@ -76,6 +76,9 @@ export function createSet(session) {
       (!half && (spec.early || []).includes(name))
     );
   }
+  /** Whether a sung line (not the short hook) is heard in a bar of a track. */
+  const singing = (t, local) =>
+    t.vocals.some((v) => v.phrase !== 'hook' && local >= v.bar && local < v.bar + v.bars);
   function layersAt(bar) {
     const { index, local } = locate(bar),
       t = track(index),
@@ -94,6 +97,8 @@ export function createSet(session) {
       'roll',
     ])
       on[name] = playing(name, section, bs);
+    // The synth lead makes room while the voice sings, the way a lead and a vocal take turns.
+    if (on.hook && singing(t, local) && section.type !== 'BUILD') on.hook = false;
     return on;
   }
 
@@ -228,6 +233,11 @@ export function createSet(session) {
       fill,
       chord: chordAt(bar),
       key: { pc: t.pc, scale: t.scale },
+      // Sung phrases that start in this bar.
+      vocals: t.vocals
+        .filter((v) => v.bar === local)
+        .map(({ phrase, harmony, bars }) => ({ phrase, harmony, bars })),
+      singing: singing(t, local),
     };
     plans.set(bar, result);
     if (plans.size > 32) plans.delete(plans.keys().next().value);

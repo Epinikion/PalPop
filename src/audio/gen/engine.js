@@ -1,6 +1,7 @@
 import { createAudioMath } from '../math.js';
 import { sweepFor } from '../sweep.js';
 import { stemsFor } from '../stems.js';
+import { vocalsFor } from '../vocals.js';
 import { STYLES } from './styles.js';
 
 /** Which kit kick each style uses. */
@@ -37,7 +38,8 @@ export function createAudioGen(
 ) {
   const style = STYLES[id],
     { mix } = style,
-    stems = stemsFor(audio);
+    stems = stemsFor(audio),
+    vocals = style.vocal ? vocalsFor(audio) : null;
 
   /** Gets the rendered loops of the tracks around a bar going. */
   function warm(bar) {
@@ -45,6 +47,7 @@ export function createAudioGen(
       { index, local } = timeline.locate(bar),
       track = timeline.track(index),
       ready = [stems.prepare(audio.session, track)];
+    if (vocals && audio.context?.decodeAudioData) ready.push(vocals.load(audio.context));
     if (local >= track.length - 40)
       ready.push(stems.prepare(audio.session, timeline.track(index + 1)));
     return Promise.all(ready);
@@ -84,11 +87,38 @@ export function createAudioGen(
       else audio.stemFlash.synth = 0.2;
     }
 
+    // Sung phrases: each file starts a little before its bar, so breaths and first consonants land
+    // ahead of the beat as a singer's do. The harmony, where there is one, sits under the lead.
+    if (vocals && song.vocal)
+      for (const cue of plan.vocals)
+        for (const [name, level] of [
+          [cue.phrase, 1],
+          [cue.harmony, 0.55],
+        ]) {
+          const buffer = name && vocals.get(audio.context, name);
+          if (!buffer) continue;
+          const source = audio.context.createBufferSource(),
+            gain = audio.context.createGain(),
+            at = t - style.vocal.pre;
+          source.buffer = buffer;
+          gain.gain.value = level;
+          source.connect(gain);
+          gain.connect(song.vocal);
+          const offset = Math.max(0, audio.context.currentTime - at);
+          source.start(Math.max(at, audio.context.currentTime), offset);
+          source.onended = () => {
+            source.disconnect();
+            gain.disconnect();
+          };
+        }
+
     // Filter and send automation through the bar.
     const hype = Math.min(1, audio.hype || 0);
     if (song.layers)
       for (const [name, layer] of Object.entries(song.layers)) {
-        layer.input.gain.setValueAtTime(style.stems[name], t);
+        // While the voice sings, the pads, arpeggio and stabs step back so the words stay clear.
+        const space = plan.singing && name !== 'bass' ? 0.6 : 1;
+        layer.input.gain.setTargetAtTime(style.stems[name] * space, t, 0.08);
         const [from, to] = plan.auto[name],
           boost = name === 'hook' || name === 'arp' ? 0.08 * hype : 0;
         layer.filter.frequency.setValueAtTime(cutoff(name, from + boost), t);
@@ -107,6 +137,7 @@ export function createAudioGen(
     if (fx.downlifter) I.eDownlifter(t, 2 * barTime, 0.05);
     if (fx.swell) I.eSwell(t + 8 * s16, 8 * s16, 0.06);
     I.eSpace(t, plan.sec === 'BREAK' ? 1.6 : plan.sec === 'BUILD' ? 1.25 : 1);
+    if (song.vocalRv) song.vocalRv.gain.setTargetAtTime(0.18 + 0.3 * plan.auto.reverb, t, 0.3);
   }
 
   function scheduleStep(step, t) {
@@ -123,6 +154,7 @@ export function createAudioGen(
     audio.section = plan.sec;
     audio.key = plan.key;
     if (si === 0) startBar(plan, t);
+    if (plan.singing && vocals?.get(audio.context, 'chorus')) audio.stemFlash.vocal = 0.25;
     if (si % 4 === 0 && !(plan.dropout && si >= 12))
       I.eSweep(t, sweepFor(plan.sec, (plan.bs + si / 16) / plan.len));
 

@@ -2,6 +2,7 @@ const SOLAR = 1;
 const BLACKOUT = 2;
 const AFTER_HOURS = 3;
 const ANTHEM = 4;
+const PALS = 5;
 /**
  * The soundtracks. Each one is a generative style (see gen/profiles.js): the song is composed as it
  * plays, from the seed, and never loops. `trim` and `pump` are per-song balance of the master bus.
@@ -52,5 +53,16 @@ const TRACKS = {
       'A CLASSIC DANCEFLOOR ANTHEM: A BRIGHT SYNTH RIFF OVER A STRAIGHT KICK, BIG BUILDS, SNARE ROLLS AND DROPS. COMPOSED AS IT PLAYS, NEVER THE SAME TWICE.',
   },
 };
+TRACKS[PALS] = {
+  buttonId: 'palsTrack',
+  label: 'VOCAL TRANCE / A SUNG CHORUS ABOUT THE PALS',
+  name: 'ALL MY PALS',
+  style: 'pals',
+  trim: 0.95,
+  pump: 0.45,
+  bpm: 138,
+  description:
+    'VOCAL TRANCE AT 138 BPM: EVERY OTHER TRACK IS THE SONG "ALL MY PALS", SUNG BY A SYNTHETIC VOICE, WITH VERSES THAT NAME THE PALS AND A CHORUS IN EVERY DROP. THE INSTRUMENTAL TRACKS BETWEEN ARE NEW EACH TIME.',
+};
 const TRACK_IDS = Object.keys(TRACKS).map(Number);
-export { SOLAR, BLACKOUT, AFTER_HOURS, ANTHEM, TRACK_IDS, TRACKS };
+export { SOLAR, BLACKOUT, AFTER_HOURS, ANTHEM, PALS, TRACK_IDS, TRACKS };

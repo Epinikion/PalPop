@@ -212,6 +212,7 @@ export function createAudioGraph({ audio }) {
       setTimeout(() => {
         for (const node of [old.out, old.dl, old.rv, old.rum, ...old.extras]) {
           try {
+            node.stop?.();
             node.disconnect();
           } catch (e) {}
         }
@@ -289,6 +290,72 @@ export function createAudioGraph({ audio }) {
       rv = audio.context.createGain();
     dl.connect(audio.graph.dlIn);
     rv.connect(audio.graph.rvIn);
+    /* the voice: cleaned, levelled and given presence, doubled left and right by two slowly drifting
+       short delays (the classic stereo double), with its own echo and reverb; the kick ducks it only
+       a little */
+    const vocal = audio.context.createGain(),
+      vocalCut = audio.context.createBiquadFilter(),
+      vocalBody = audio.context.createBiquadFilter(),
+      vocalPresence = audio.context.createBiquadFilter(),
+      vocalLevel = audio.context.createDynamicsCompressor(),
+      vocalOut = audio.context.createGain(),
+      vocalDuck = audio.context.createGain(),
+      vocalDl = audio.context.createGain(),
+      vocalRv = audio.context.createGain(),
+      doubles = [];
+    vocalCut.type = 'highpass';
+    vocalCut.frequency.value = 140;
+    vocalCut.Q.value = 0.7;
+    vocalBody.type = 'peaking';
+    vocalBody.frequency.value = 350;
+    vocalBody.Q.value = 1;
+    vocalBody.gain.value = -2.5;
+    vocalPresence.type = 'peaking';
+    vocalPresence.frequency.value = 3200;
+    vocalPresence.Q.value = 0.8;
+    vocalPresence.gain.value = 3;
+    vocalLevel.threshold.value = -24;
+    vocalLevel.knee.value = 10;
+    vocalLevel.ratio.value = 3;
+    vocalLevel.attack.value = 0.006;
+    vocalLevel.release.value = 0.14;
+    vocalOut.gain.value = 2.2;
+    vocalDl.gain.value = 0.22;
+    vocalRv.gain.value = 0.3;
+    vocal.connect(vocalCut);
+    vocalCut.connect(vocalBody);
+    vocalBody.connect(vocalPresence);
+    vocalPresence.connect(vocalLevel);
+    vocalLevel.connect(vocalOut);
+    vocalOut.connect(vocalDuck);
+    vocalDuck.connect(out);
+    for (const [time, pan, rate] of [
+      [0.013, -0.55, 0.37],
+      [0.021, 0.55, 0.51],
+    ]) {
+      const delay = audio.context.createDelay(0.05),
+        position = audio.context.createStereoPanner(),
+        level = audio.context.createGain(),
+        lfo = audio.context.createOscillator(),
+        depth = audio.context.createGain();
+      delay.delayTime.value = time;
+      position.pan.value = pan;
+      level.gain.value = 0.42;
+      lfo.frequency.value = rate;
+      depth.gain.value = 0.0018;
+      lfo.connect(depth);
+      depth.connect(delay.delayTime);
+      lfo.start();
+      vocalOut.connect(delay);
+      delay.connect(level);
+      level.connect(position);
+      position.connect(vocalDuck);
+      doubles.push(delay, position, level, lfo, depth);
+    }
+    vocalOut.connect(vocalDl);
+    vocalOut.connect(vocalRv);
+    vocalDl.connect(dl);
+    vocalRv.connect(rv);
     /* one bus per melodic layer: its filter and sends are what the arrangement automates */
     const layers = {};
     for (const name of ['bass', 'hook', 'arp', 'stab', 'pad']) {
@@ -321,6 +388,9 @@ export function createAudioGraph({ audio }) {
       acidSh,
       rum,
       layers,
+      vocal,
+      vocalDuck,
+      vocalRv,
       dl,
       rv,
       sweep,
@@ -333,6 +403,16 @@ export function createAudioGraph({ audio }) {
         rumLP,
         rumSat,
         rumOut,
+        vocal,
+        vocalCut,
+        vocalBody,
+        vocalPresence,
+        vocalLevel,
+        vocalOut,
+        vocalDuck,
+        vocalDl,
+        vocalRv,
+        ...doubles,
         ...widener.nodes,
         ...Object.values(layers).flatMap((layer) => [
           layer.input,

@@ -9,15 +9,17 @@ import { TRACKS, TRACK_IDS } from '../src/audio/catalog.js';
 import { composeGenSession, createTimeline } from '../src/audio/gen/timeline.js';
 import { STYLES, STYLE_IDS } from '../src/audio/gen/styles.js';
 import { SCALES } from '../src/audio/gen/scales.js';
+import { VOCAL_FILES } from '../src/audio/vocals.js';
+import fs from 'node:fs';
 
 const SEEDS = [42, 7, 123456789];
 const timelineOf = (id, seed) => createTimeline(composeGenSession(id, seed, null));
 
 test('every catalog song is a generated style with a complete registration', () => {
-  assert.deepEqual(TRACK_IDS, [1, 2, 3, 4]);
+  assert.deepEqual(TRACK_IDS, [1, 2, 3, 4, 5]);
   assert.deepEqual(
     TRACK_IDS.map((id) => TRACKS[id].style),
-    ['euphoria', 'rave', 'melodic', 'anthem'],
+    ['euphoria', 'rave', 'melodic', 'anthem', 'pals'],
   );
   const buttons = new Set();
   for (const id of TRACK_IDS) {
@@ -251,4 +253,89 @@ test('merge feedback is immediate while musical rewards coalesce and retry prese
   assert.equal(audio.songStart, 7);
   assert.equal(audio.session.style, 'rave');
   assert(audio.playing);
+});
+
+test('the sung song comes back every other track, always in E minor over Em C G D', () => {
+  const style = STYLES.pals.vocal;
+  for (const seed of SEEDS) {
+    const timeline = timelineOf('pals', seed);
+    for (let index = 0; index < 8; index++) {
+      const track = timeline.track(index);
+      assert.equal(track.sung, index % 2 === 0);
+      if (!track.sung) {
+        assert.equal(track.vocals.length, 0);
+        continue;
+      }
+      assert.equal(track.pc, 4);
+      assert.equal(track.scale, 'minor');
+      assert.deepEqual(
+        track.chords.map((chord) => chord.deg),
+        [0, 5, 2, 6],
+      );
+      assert.equal(track.chordBars, 2);
+      track.sections.forEach((section, i) => {
+        if (!(index === 0 && i === 0)) assert.equal(section.len, style.lengths[i]);
+      });
+      // Every phrase starts on a whole loop (lines follow the chords) and ends inside its section.
+      for (const cue of track.vocals) {
+        const section = track.sections.find((s) => cue.bar >= s.start && cue.bar < s.start + s.len);
+        assert(section, `${cue.phrase} at bar ${cue.bar} is inside a section`);
+        assert(cue.bar + cue.bars <= section.start + section.len);
+        if (cue.phrase !== 'hook')
+          assert.equal(cue.bar % 8, 0, 'a sung line starts with the chords');
+        assert(
+          VOCAL_FILES.includes(cue.phrase) && (!cue.harmony || VOCAL_FILES.includes(cue.harmony)),
+        );
+      }
+      const lines = track.vocals.filter((cue) => cue.phrase !== 'hook');
+      for (let i = 1; i < lines.length; i++)
+        assert(lines[i].bar >= lines[i - 1].bar + lines[i - 1].bars, 'sung lines never overlap');
+      assert.deepEqual(
+        lines.filter(
+          (cue) =>
+            track.sections.find((s) => s.start <= cue.bar && cue.bar < s.start + s.len).type ===
+            'DROP',
+        ).length,
+        4,
+        'the chorus is sung twice in each drop',
+      );
+    }
+  }
+});
+
+test('the synth lead makes room while the voice sings, and the plan cues every phrase', () => {
+  const timeline = timelineOf('pals', 42),
+    track = timeline.track(0),
+    start = timeline.locate(0).start;
+  let cued = 0;
+  for (let local = 0; local < track.length; local++) {
+    const plan = timeline.plan(start + local);
+    cued += plan.vocals.length;
+    if (plan.singing && plan.sec !== 'BUILD') assert.equal(plan.on.hook, false, `bar ${local}`);
+    for (const cue of plan.vocals)
+      assert(track.vocals.some((v) => v.bar === local && v.phrase === cue.phrase));
+  }
+  assert.equal(cued, track.vocals.length);
+});
+
+test('every sung phrase is on disk, as long as its bars at 138 BPM plus the lead-in and the tail', () => {
+  const song = JSON.parse(
+      fs.readFileSync(new URL('../tools/vocals/all-my-pals.json', import.meta.url)),
+    ),
+    s16 = 60 / song.bpm / 4;
+  assert.equal(song.bpm, STYLES.pals.bpm[0]);
+  assert.equal(song.pre, STYLES.pals.vocal.pre);
+  for (const name of VOCAL_FILES) {
+    const data = fs.readFileSync(new URL(`../assets/vocals/${name}.wav`, import.meta.url)),
+      view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    assert.equal(String.fromCharCode(...data.subarray(0, 4)), 'RIFF');
+    const rate = view.getUint32(24, true),
+      bits = view.getUint16(34, true),
+      seconds = (data.byteLength - 44) / (rate * (bits / 8)),
+      phrase = song.phrases[name.replace('-low', '')],
+      expected = song.pre + phrase.bars * 16 * s16;
+    assert.equal(rate, 22050);
+    assert(seconds > expected && seconds < expected + 1.5, `${name}: ${seconds.toFixed(2)} s`);
+    if (!name.endsWith('-low')) assert.equal(STYLES.pals.vocal.phrases[name], phrase.bars);
+  }
 });

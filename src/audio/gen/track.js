@@ -55,14 +55,27 @@ const MOVES = {
   ],
 };
 
+/** Whether a track of a set is its sung one (styles with vocals alternate sung and instrumental tracks). */
+export const isVocal = (session, index) => {
+  const vocal = STYLES[session.style].vocal;
+  return !!vocal && index % vocal.every === 0;
+};
+
 /** The length of every section of a track; cheap, so the set can place tracks without composing them. */
 export function formOf(session, index) {
   const style = STYLES[session.style],
-    seed = hash(session.seed, session.style, 'track', index);
+    seed = hash(session.seed, session.style, 'track', index),
+    sung = isVocal(session, index);
   let start = 0;
   const sections = style.form.map((spec, i) => {
     // The first track of a session opens quickly: a game should not wait half a minute for music.
-    const len = index === 0 && spec.type === 'INTRO' ? 8 : pick(spec.len, seed, 'len', i),
+    // A sung track has a fixed form, because its phrases were sung for it.
+    const len =
+        index === 0 && spec.type === 'INTRO'
+          ? 8
+          : sung
+            ? style.vocal.lengths[i]
+            : pick(spec.len, seed, 'len', i),
       section = { index: i, type: spec.type, start, len, variant: spec.variant || 'A', spec };
     start += len;
     return section;
@@ -80,15 +93,24 @@ export function composeTrack(session, index, previousPc) {
   const style = STYLES[session.style],
     seed = hash(session.seed, session.style, 'track', index),
     first = index === 0,
-    pc = first
-      ? session.pc
-      : pick(
-          style.keys.filter((key) => key !== previousPc),
-          seed,
-          'key',
-        ),
-    scale = first ? session.scale : weighted(style.scales, seed, 'scale'),
-    [degrees, chordBars] = pick(style.progressions, seed, 'progression'),
+    sung = isVocal(session, index),
+    pc = sung
+      ? style.vocal.pc
+      : first
+        ? session.pc
+        : pick(
+            style.keys.filter((key) => key !== previousPc),
+            seed,
+            'key',
+          ),
+    scale = sung
+      ? style.vocal.scale
+      : first
+        ? session.scale
+        : weighted(style.scales, seed, 'scale'),
+    [degrees, chordBars] = sung
+      ? style.vocal.progression
+      : pick(style.progressions, seed, 'progression'),
     cycleBars = degrees.length * chordBars,
     steps = cycleBars * 16,
     note = (degree, base) => degreeNote(pc, scale, degree, base);
@@ -235,6 +257,17 @@ export function composeTrack(session, index, previousPc) {
   );
 
   const { sections, length } = formOf(session, index);
+  // The sung phrases of a sung track: where each starts (bar in the track) and how long it lasts.
+  const vocals = sung
+    ? sections.flatMap((section, i) =>
+        style.vocal.cues[i].map(([bar, phrase, harmony]) => ({
+          bar: section.start + bar,
+          phrase,
+          harmony: harmony || null,
+          bars: style.vocal.phrases[phrase],
+        })),
+      )
+    : [];
   return {
     index,
     seed,
@@ -262,6 +295,8 @@ export function composeTrack(session, index, previousPc) {
     },
     sections,
     length,
+    sung,
+    vocals,
   };
 }
 

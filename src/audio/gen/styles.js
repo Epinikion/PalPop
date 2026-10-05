@@ -221,6 +221,104 @@ export const STYLES = {
     pump: 0.45,
   },
 
+  /* Vocal trance at 138 BPM: the sound of SOLAR RUSH, slower, and every other track is the sung song
+     "All My Pals" - verses that name the pals, a chorus in the breakdown and in both drops. */
+  pals: {
+    bpm: [138, 138],
+    swing: 0,
+    keys: [9, 0, 2, 7, 5, 11],
+    scales: [
+      ['minor', 3],
+      ['major', 2],
+    ],
+    progressions: [
+      [[5, 3, 0, 4], 2],
+      [[0, 4, 5, 3], 2],
+      [[3, 4, 5, 5], 2],
+      [[5, 4, 3, 4], 2],
+      [[3, 0, 4, 5], 2],
+      [[0, 2, 3, 4], 2],
+      [[5, 3, 0, 4], 1],
+    ],
+    bass: ['.RRR.RRR.RRR.RRR', '.RRR.RRR.RRR.ROR', '.RRO.RRO.RRO.RRO'],
+    bassRange: [33, 45],
+    hookRhythms: [
+      'X--X--X-X--X--X-',
+      'X-X-X--X-X-X--X-',
+      'X--X--X-X-X-X-X-',
+      'X---X--X--X-X---X--X--X-X-X-X---',
+      'X-X--X--X-X-X---X-X--X--X---X-X-',
+    ],
+    hookRange: [64, 84],
+    hookMoves: 'lead',
+    arp: {
+      rhythms: ['XXXXXXXXXXXXXXXX', 'XXXXXXXXXXXXXXXX', 'X.XXX.XXX.XXX.XX'],
+      orders: [
+        [0, 1, 2, 3],
+        [0, 2, 1, 3, 2, 1],
+        [0, 1, 2, 1, 3, 2, 1, 2],
+        [3, 2, 1, 0],
+      ],
+      range: [64, 88],
+    },
+    stabRhythms: null,
+    drums: {
+      kick: ['X...X...X...X...'],
+      hat: [',.,.,.,.,.,.,.,.', ',.-.,.-.,.-.,.-.', '-,-,-,-,-,-,-,-,'],
+      open: ['..x...x...x...x.'],
+      clap: ['....X.......X...'],
+      ride: ['..x...x...x...x.', 'x.o.x.o.x.o.x.o.'],
+      perc: ['................................', '..........o.........o.......o...'],
+    },
+    form: FORM,
+    sound: { kick: 'clean', rumble: 0, hook: 'supersaw', arp: 'pluck', pad: 'wall', bass: 'roll' },
+    mix: { kick: 0.72, rumble: 0, bass: 0.8, hat: 1.5, open: 1.1, clap: 0.9, ride: 1, perc: 1 },
+    stems: { bass: 0.6, hook: 0.85, pad: 0.6, arp: 0.5, stab: 0.5 },
+    pump: 0.45,
+    // Every other track is the sung one: always in E minor over Em C G D, with its own fixed form.
+    // `cues` says, per section of that form, at which bar each sung phrase starts (see
+    // tools/vocals/all-my-pals.json, where the phrases are written, and assets/vocals, where they are).
+    vocal: {
+      every: 2,
+      pc: 4,
+      scale: 'minor',
+      progression: [[0, 5, 2, 6], 2],
+      lengths: [16, 16, 16, 8, 32, 8, 8, 32, 16],
+      pre: 0.6,
+      phrases: { verse1: 8, verse2: 8, chorus: 8, hook: 1 },
+      cues: [
+        [],
+        [[8, 'verse1']],
+        [
+          [0, 'verse2'],
+          [8, 'chorus'],
+        ],
+        [
+          [0, 'hook'],
+          [2, 'hook'],
+          [4, 'hook'],
+          [6, 'hook'],
+        ],
+        [
+          [0, 'chorus'],
+          [16, 'chorus', 'chorus-low'],
+        ],
+        [[0, 'chorus']],
+        [
+          [0, 'hook'],
+          [2, 'hook'],
+          [4, 'hook'],
+          [6, 'hook'],
+        ],
+        [
+          [0, 'chorus', 'chorus-low'],
+          [16, 'chorus', 'chorus-low'],
+        ],
+        [[0, 'hook']],
+      ],
+    },
+  },
+
   /* Melodic techno, after a 126 BPM mix in A minor: a round kick, a bass that rolls and moves to the
      fifth, a plucked motif with a long echo that carries the track, wide pads and long builds. */
   melodic: {

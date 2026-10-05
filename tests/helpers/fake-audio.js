@@ -36,7 +36,8 @@ export function fakeContext() {
         this.endTime = time;
       },
     };
-    for (const name of params) node[name] = param();
+    // A connection into a parameter (an LFO into a delay time) counts as reaching the node.
+    for (const name of params) node[name] = { ...param(), edges: [node] };
     nodes.push(node);
     return node;
   };
