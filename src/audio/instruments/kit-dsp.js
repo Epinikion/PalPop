@@ -64,7 +64,7 @@ const add = (target, source, gain = 1, offset = 0) => {
 /** Kick: a pitch-dropping sine into saturation, a short click and a long, low tail. */
 function kick(
   sampleRate,
-  { start, end, drop, fast, slow, mixSlow, drive, click, length, knock },
+  { start, end, drop, fast, slow, mixSlow, drive, click, length, knock, tone = 7000 },
   random,
 ) {
   const out = new Float32Array(Math.floor(sampleRate * length));
@@ -84,8 +84,10 @@ function kick(
   const snap = noise(random, Math.floor(sampleRate * 0.012));
   for (let i = 0; i < snap.length; i++) snap[i] *= decay(i / sampleRate, 0.0016);
   add(out, filter('highpass', 2200, 0.7, snap, sampleRate), click);
+  // The tone filter decides how much of the distortion is heard: a clean kick keeps only its
+  // weight and click, a hard one lets its harmonics sweep down through the mids.
   return finish(
-    filter('highpass', 24, 0.7, filter('lowpass', 7000, 0.7, out, sampleRate), sampleRate),
+    filter('highpass', 24, 0.7, filter('lowpass', tone, 0.7, out, sampleRate), sampleRate),
     sampleRate,
   );
 }
@@ -216,30 +218,51 @@ const DRUMS = (() => {
   return {
     kick: make(
       [
+        // Clean: a fast pitch fall, a short click and nothing above the low mids - the trance and
+        // Eurodance kick, which leaves the mids to the synths.
         {
-          start: 175,
+          start: 170,
           end: KICK_HZ,
-          drop: 0.02,
-          fast: 0.09,
-          slow: 0.22,
+          drop: 0.018,
+          fast: 0.12,
+          slow: 0.24,
           mixSlow: 0.35,
-          drive: 3.2,
-          click: 0.16,
-          knock: 0.45,
-          length: 0.7,
-        },
-        {
-          start: 230,
-          end: KICK_HZ + 4,
-          drop: 0.014,
-          fast: 0.07,
-          slow: 0.16,
-          mixSlow: 0.28,
-          drive: 4.2,
-          click: 0.26,
-          knock: 0.6,
+          drive: 1.8,
+          click: 0.14,
+          knock: 0.05,
+          tone: 1200,
           length: 0.5,
         },
+        // Punch: a little more knock and bite, the melodic techno kick.
+        {
+          start: 210,
+          end: KICK_HZ,
+          drop: 0.016,
+          fast: 0.09,
+          slow: 0.2,
+          mixSlow: 0.3,
+          drive: 2.4,
+          click: 0.2,
+          knock: 0.35,
+          tone: 3000,
+          length: 0.5,
+        },
+        // Hard: a slower sweep into heavy distortion and a long tail, whose harmonics fall through
+        // the mids - the hard-techno kick that feeds the rumble.
+        {
+          start: 320,
+          end: KICK_HZ,
+          drop: 0.035,
+          fast: 0.16,
+          slow: 0.4,
+          mixSlow: 0.55,
+          drive: 5.5,
+          click: 0.25,
+          knock: 0.4,
+          tone: 7000,
+          length: 0.75,
+        },
+        // Round: a long, soft body for quiet passages.
         {
           start: 150,
           end: KICK_HZ - 2,
@@ -247,49 +270,11 @@ const DRUMS = (() => {
           fast: 0.12,
           slow: 0.3,
           mixSlow: 0.45,
-          drive: 2.6,
+          drive: 2,
           click: 0.1,
-          knock: 0.3,
-          length: 0.85,
-        },
-        // Clean: almost no energy above the sub but the click, so a rolling bass can own the low mids.
-        {
-          start: 130,
-          end: KICK_HZ,
-          drop: 0.03,
-          fast: 0.1,
-          slow: 0.25,
-          mixSlow: 0.3,
-          drive: 2.2,
-          click: 0.14,
-          knock: 0.1,
-          length: 0.6,
-        },
-        // Hard: a very fast pitch fall into heavy distortion and a bright click, the hard-techno kick.
-        {
-          start: 300,
-          end: 44,
-          drop: 0.012,
-          fast: 0.11,
-          slow: 0.32,
-          mixSlow: 0.5,
-          drive: 7.5,
-          click: 0.3,
-          knock: 0.55,
-          length: 0.55,
-        },
-        // Raw: a long, audible pitch fall with little distortion, the kick of fast trance.
-        {
-          start: 150,
-          end: 50,
-          drop: 0.045,
-          fast: 0.12,
-          slow: 0.28,
-          mixSlow: 0.4,
-          drive: 2.4,
-          click: 0.1,
-          knock: 0.15,
-          length: 0.6,
+          knock: 0.2,
+          tone: 1400,
+          length: 0.7,
         },
       ],
       kick,
@@ -343,8 +328,8 @@ const DRUMS = (() => {
     ),
     open: make(
       [
-        { scale: 1, time: 0.16, quick: true, length: 0.6, band: 9500, low: 6000, grit: 0.25 },
-        { scale: 1.04, time: 0.21, quick: true, length: 0.75, band: 10000, low: 6200, grit: 0.2 },
+        { scale: 1, time: 0.075, quick: true, length: 0.35, band: 9500, low: 6500, grit: 0.15 },
+        { scale: 1.04, time: 0.09, quick: true, length: 0.4, band: 10000, low: 6800, grit: 0.12 },
       ],
       metal,
     ),

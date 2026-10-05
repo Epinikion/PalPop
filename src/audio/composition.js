@@ -23,5 +23,5 @@ export function createAudioComposition({ audio }) {
   function composeSession(seed, tonal) {
     return SONG_STYLES[tonal?.style || TRACKS[audio.trackId].style].compose(seed, tonal);
   }
-  return { sectionAt, planAt, chordFor, LOOK, composeSession };
+  return { sectionAt, planAt, chordFor, LOOK, composeSession, timeline: timelineOf };
 }

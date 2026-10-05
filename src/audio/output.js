@@ -22,7 +22,7 @@ export function createAudioOutput(context) {
   const curve = new Float32Array(4096);
   for (let i = 0; i < curve.length; i++) {
     const x = (i * 2) / (curve.length - 1) - 1;
-    curve[i] = Math.tanh(x * 1.7) / Math.tanh(1.7);
+    curve[i] = Math.tanh(x * 1.2) / Math.tanh(1.2);
   }
   clipper.curve = curve;
   clipper.oversample = '2x';

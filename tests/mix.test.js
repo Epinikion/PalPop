@@ -200,11 +200,13 @@ function drumRig({ rum = false, pump = 1 } = {}) {
   };
 }
 
-test('the kick dips the synth bus instantly and lets it breathe back exponentially', () => {
+test('the kick glides the bus down in a few milliseconds and lets it breathe back', () => {
   const { drums, duck, cleanups } = drumRig();
   drums.eKick(5, 0.5, 0.7, 0, 55, 1);
   const [dip, release] = duck.gain.calls;
-  assert.deepEqual(dip.slice(0, 3), ['set', 1 - 0.7, 5]);
+  // A glide, not a jump: a step in the level of a held sound is heard as a click.
+  assert.deepEqual(dip.slice(0, 3), ['target', 1 - 0.7, 5]);
+  assert(dip[3] > 0 && dip[3] < 0.003);
   assert.equal(release[0], 'target');
   assert.equal(release[1], 1);
   assert(release[3] > 0.03 && release[3] < 0.15, 'recovers within about a quarter of a beat');
@@ -215,7 +217,7 @@ test('the kick ducks the bass bus fully and the synth bus by the song pump share
   for (const pump of [1, 0.3, 0]) {
     const { drums, duck, melDuck } = drumRig({ pump });
     drums.eKick(5, 0.5, 0.7, 0, 55, 1);
-    assert.deepEqual(duck.gain.calls[0].slice(0, 3), ['set', 1 - 0.7, 5]);
+    assert.deepEqual(duck.gain.calls[0].slice(0, 3), ['target', 1 - 0.7, 5]);
     const [dip, release] = melDuck.gain.calls;
     assert(Math.abs(dip[1] - (1 - 0.7 * pump)) < 1e-12 && dip[2] === 5);
     assert(release[0] === 'target' && release[1] === 1 && release[3] === 0.075);
@@ -223,7 +225,7 @@ test('the kick ducks the bass bus fully and the synth bus by the song pump share
 });
 
 test('kick variants hold their loudness and the rumble feed rides on the kick', () => {
-  const levels = [0, 1, 2, 3, 4, 5].map((variant) => {
+  const levels = [0, 1, 2, 3].map((variant) => {
       const { drums, cleanups } = drumRig();
       drums.eKick(1, 0.5, 0, 0, undefined, variant);
       return cleanups[0][1].gain.value;

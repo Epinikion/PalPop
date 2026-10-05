@@ -17,8 +17,8 @@ const GAIN = {
   ping: 1.6,
   conga: 1.3,
 };
-/** Equal-loudness gain of each kick variant: thud, punch, long, clean, hard, raw. */
-const KICK = [1.17, 1.35, 1.0, 1.2, 0.95, 1.15];
+/** Equal-loudness gain of each kick variant: clean, punch, hard, round. */
+const KICK = [1.2, 1.17, 0.98, 1.18];
 /** Where each tom variant settles, and how the old glide (f0 down to 0.55 f0) is heard. */
 const TOM_HZ = [96, 132, 176];
 const TOM_GLIDE = 0.7;
@@ -26,7 +26,7 @@ const log = Math.log;
 
 export function createDrums({ kit }) {
   /**
-   * Kick at `hz` (the kit's own tuning when omitted); `variant` is thud 0, punch 1 or long 2, and
+   * Kick at `hz` (the kit's own tuning when omitted); `variant` is clean 0, punch 1, hard 2 or round 3, and
    * `rum` the share fed to the rumble bus on songs that have one.
    */
   function eKick(t, v, duck, rum = 0, hz, variant = 0) {

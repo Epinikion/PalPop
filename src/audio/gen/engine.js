@@ -1,19 +1,113 @@
 import { createAudioMath } from '../math.js';
 import { sweepFor } from '../sweep.js';
-import { PROFILES } from './profiles.js';
+import { stemsFor } from '../stems.js';
+import { STYLES } from './styles.js';
 
-const clamp01 = (x) => Math.max(0, Math.min(1, x));
+/** Which kit kick each style uses. */
+const KICKS = { clean: 0, punch: 1, hard: 2, round: 3 };
+/** Each melodic layer's filter range: 0 in the automation is the low end, 1 the high end (Hz). */
+const RANGE = {
+  bass: [90, 4000],
+  hook: [260, 16000],
+  arp: [300, 14000],
+  stab: [300, 12000],
+  pad: [220, 12000],
+};
+/** How much of each layer goes to the echo and the reverb, at a reverb setting of 1. */
+const SENDS = {
+  bass: [0, 0],
+  hook: [0.22, 0.32],
+  arp: [0.34, 0.3],
+  stab: [0.12, 0.3],
+  pad: [0.05, 0.42],
+};
+const cutoff = (layer, v) => {
+  const [low, high] = RANGE[layer];
+  return low * (high / low) ** Math.max(0, Math.min(1, v));
+};
 
 /**
- * Plays a generated song. The timeline says what happens in a bar (see `layers.js`); this turns it
- * into voice calls, one sixteenth at a time, on the clock the scheduler hands over. The profile's
- * `mix` and `sound` say how loud each layer is and how it is voiced.
+ * Plays a generated set. The drums are struck live from the kit, step by step; the melodic layers
+ * are loops rendered ahead of time (`stems.js`), started at the bar where they come in and shaped
+ * as they play by each layer's filter and sends, the way a producer automates a track.
  */
 export function createAudioGen(
   { audio, audioComposition, audioInstruments: I, audioMath = createAudioMath(audio) },
   id,
 ) {
-  const { mix, sound } = PROFILES[id];
+  const style = STYLES[id],
+    { mix } = style,
+    stems = stemsFor(audio);
+
+  /** Gets the rendered loops of the tracks around a bar going. */
+  function warm(bar) {
+    const timeline = audioComposition.timeline(),
+      { index, local } = timeline.locate(bar),
+      track = timeline.track(index),
+      ready = [stems.prepare(audio.session, track)];
+    if (local >= track.length - 40)
+      ready.push(stems.prepare(audio.session, timeline.track(index + 1)));
+    return Promise.all(ready);
+  }
+
+  function startBar(plan, t) {
+    const session = audio.session,
+      timeline = audioComposition.timeline(),
+      track = timeline.track(plan.track),
+      barTime = 16 * session.s16,
+      song = audio.graph.song;
+    warm(plan.bar);
+
+    // Loops that come in (or start over) in this bar.
+    for (const entry of plan.stems) {
+      const buffer = stems.get(session, track, entry.stem),
+        layer = song.layers?.[entry.layer];
+      if (!buffer || !layer) continue;
+      const source = audio.context.createBufferSource(),
+        fader = audio.context.createGain(),
+        span = entry.bars * barTime,
+        stop = entry.ends ? t + span + 0.06 : t + span + 1.5;
+      source.buffer = buffer;
+      source.connect(fader);
+      fader.connect(layer.input);
+      if (entry.ends) {
+        fader.gain.setValueAtTime(1, t + span - 0.03);
+        fader.gain.linearRampToValueAtTime(0, t + span + 0.05);
+      }
+      source.start(t, entry.offset * barTime);
+      source.stop(Math.min(stop, t + buffer.duration - entry.offset * barTime));
+      source.onended = () => {
+        source.disconnect();
+        fader.disconnect();
+      };
+      if (entry.layer === 'bass') audio.stemFlash.bass = 0.2;
+      else audio.stemFlash.synth = 0.2;
+    }
+
+    // Filter and send automation through the bar.
+    const hype = Math.min(1, audio.hype || 0);
+    if (song.layers)
+      for (const [name, layer] of Object.entries(song.layers)) {
+        layer.input.gain.setValueAtTime(style.stems[name], t);
+        const [from, to] = plan.auto[name],
+          boost = name === 'hook' || name === 'arp' ? 0.08 * hype : 0;
+        layer.filter.frequency.setValueAtTime(cutoff(name, from + boost), t);
+        layer.filter.frequency.linearRampToValueAtTime(cutoff(name, to + boost), t + barTime);
+        const [echo, room] = SENDS[name];
+        layer.dl.gain.setTargetAtTime(echo * (0.6 + 0.6 * plan.auto.reverb), t, 0.3);
+        layer.rv.gain.setTargetAtTime(room * plan.auto.reverb, t, 0.3);
+      }
+
+    // Transitions.
+    const fx = plan.fx,
+      s16 = session.s16;
+    if (fx.riser) I.eRiser(t, fx.riser * barTime - 2 * s16, 0.05);
+    if (fx.crash) I.eCrash(t, fx.crash === 'long' ? 0.07 : 0.04, fx.crash === 'long');
+    if (fx.impact) I.eImpact(t, 0.4);
+    if (fx.downlifter) I.eDownlifter(t, 2 * barTime, 0.05);
+    if (fx.swell) I.eSwell(t + 8 * s16, 8 * s16, 0.06);
+    I.eSpace(t, plan.sec === 'BREAK' ? 1.6 : plan.sec === 'BUILD' ? 1.25 : 1);
+  }
 
   function scheduleStep(step, t) {
     const bar = Math.floor(step / 16),
@@ -22,112 +116,55 @@ export function createAudioGen(
       plan = audioComposition.planAt(bar),
       s16 = session.s16,
       ts = t + (si % 2 ? session.swing * s16 : 0),
-      { sec, bs, len } = plan,
-      gone = plan.dropout && si >= 12,
-      heat = clamp01(audio.hype || 0),
-      filter = clamp01(plan.filter + 0.25 * heat),
       human = (salt) => audioMath.hashRand(step, salt),
-      drift = (human(3) - 0.5) * 0.006,
-      pan = (salt) => (human(salt) - 0.5) * 2;
+      drift = (human(3) - 0.5) * 0.004,
+      d = plan.drums;
     audio.bar = bar;
-    audio.section = sec;
-    if (si % 4 === 0 && !gone) I.eSweep(t, sweepFor(sec, plan.progress + si / 16 / len));
-    if (si === 0)
-      I.eSpace(t, sec === 'BREAK' ? 1.6 : sec === 'BUILD' ? 1.2 : sec === 'DROP' ? 0.9 : 1);
+    audio.section = plan.sec;
+    audio.key = plan.key;
+    if (si === 0) startBar(plan, t);
+    if (si % 4 === 0 && !(plan.dropout && si >= 12))
+      I.eSweep(t, sweepFor(plan.sec, (plan.bs + si / 16) / plan.len));
 
-    // --- drums ---
-    if (plan.kick[si] > 0)
+    if (d.kick[si] > 0)
       I.eKick(
         t,
-        0.6 * mix.kick * plan.kick[si],
-        sound.duck,
-        0,
-        I.kickTuning(session.pc) * 2 ** (sound.tune / 12),
-        sound.kick,
+        0.62 * mix.kick * d.kick[si],
+        0.55,
+        plan.on.rumble ? style.sound.rumble : 0,
+        I.kickTuning(plan.key.pc) * 2 ** ((style.sound.tune || 0) / 12),
+        KICKS[style.sound.kick],
       );
-    if (!gone) {
-      if (plan.clap[si] > 0) I.eClap(t, 0.2 * mix.clap * plan.clap[si]);
-      if (plan.open[si] > 0) I.eHat(ts + drift, true, 0.1 * mix.open * plan.open[si], 0.22);
-      else if (plan.hat[si] > 0)
-        I.eHat(ts + drift, false, 0.07 * mix.hat * plan.hat[si], (si % 4 < 2 ? -1 : 1) * 0.25);
-      if (plan.snare[si] > 0)
-        I.eSnare(ts, 0.05 * mix.snare * plan.snare[si], 0.9 + 0.5 * plan.progress);
-      for (const hit of plan.perc) if (hit.si === si) perc(hit, ts + drift);
-    }
-
-    // --- low end ---
-    for (const note of plan.bass)
-      if (note.si === si)
-        I.eRoll(ts, note.note, s16 * (0.55 + 0.4 * note.len), 0.3 * mix.bass * note.vel, {
-          color: 0.35 + 0.5 * filter,
-        });
-
-    // --- harmony and melody ---
-    for (const hit of plan.stab)
-      if (hit.si === si)
-        I.eRave(ts + drift, hit.notes, s16 * (0.6 + 0.5 * hit.len), 0.11 * mix.stab * hit.vel, {
-          style: sound.voices,
-          filter,
-          pan: pan(5) * 0.4,
-        });
-    for (const hit of plan.arp)
-      if (hit.si === si)
-        I.eArp(ts + drift, hit.note, s16 * hit.len, 0.1 * mix.arp * hit.vel * (1 + 0.3 * heat), {
-          style: sound.voices,
-          filter,
-          pan: (si % 4 < 2 ? -1 : 1) * 0.35,
-        });
-    for (const hit of plan.acid)
-      if (hit.si === si)
-        I.eAcid(
-          ts,
-          hit.note,
-          s16 * (hit.slide ? 1.25 : hit.len),
-          hit.accent,
-          hit.from,
-          300 + 2200 * (0.2 + 0.8 * filter),
-          0.075 * mix.acid * hit.vel,
-        );
-    for (const hit of plan.lead)
-      if (hit.si === si)
-        I.eAnthem(ts + drift, hit.note, s16 * hit.len * 0.95, 0.12 * mix.lead * hit.vel, {
-          style: sound.voices,
-          from: hit.from,
-          filter,
-        });
-    if (si === 0 && plan.pad)
-      I.ePad(
-        t,
-        plan.pad.notes,
-        plan.pad.bars * 16 * s16,
-        0.075 * mix.pad,
-        sec === 'BREAK' || sec === 'DROP' || sec === 'BUILD',
+    if (d.clap[si] > 0) I.eClap(t + drift * 0.5, 0.17 * mix.clap * d.clap[si]);
+    if (d.open[si] > 0) I.eHat(ts + drift, true, 0.1 * mix.open * d.open[si], 0.18);
+    if (d.hat[si] > 0)
+      I.eHat(
+        ts + drift,
+        false,
+        0.16 * mix.hat * d.hat[si] * (0.85 + 0.3 * human(1)),
+        si % 4 < 2 ? -0.22 : 0.22,
       );
-
-    // --- transitions ---
-    const fx = plan.fx;
-    if (si === 0) {
-      if (fx.riser) I.eRiser(t, fx.riser * s16 - 4 * s16, 0.045);
-      if (fx.crash) I.eCrash(t, fx.crash === 'long' ? 0.07 : 0.04, fx.crash === 'long');
-      if (fx.impact) I.eImpact(t, fx.impact === 'soft' ? 0.28 : 0.45);
-      if (fx.downlifter) I.eDownlifter(t, 32 * s16, 0.06);
-    }
-    if (si === 8 && fx.swell) I.eSwell(t, 8 * s16, 0.07);
-    // Every so often the song hands over to fresh material with an impact, like a DJ mixing on.
-    if (si === 0 && bar > 0 && bs === 0 && sec === 'GROOVE') I.eImpact(t, 0.25);
+    if (d.ride[si] > 0) I.eRide(ts + drift, 0.24 * mix.ride * d.ride[si], 0.3);
+    if (d.perc[si] > 0) perc(ts + drift, d.perc[si], si);
+    if (d.snare[si] > 0) I.eSnare(ts, 0.05 * d.snare[si], 0.95 + 0.4 * plan.progress);
+    if (d.tom[si] > 0) I.eTom(ts, 200 - 14 * (si - 12), 0.14 * d.tom[si]);
   }
 
-  /** One percussion hit, voiced by its kind. */
-  function perc(hit, at) {
-    const v = hit.vel,
-      side = (hit.si % 4 < 2 ? -1 : 1) * 0.35;
-    if (hit.kind === 'rim') I.ePerc(at, 'tick', 0.1 * mix.perc * v, side);
-    else if (hit.kind === 'tom') I.eTom(at, 140 + 90 * (hit.si % 3), 0.16 * mix.perc * v);
-    else if (hit.kind === 'ping')
-      I.eKitPing(at, 72 + audio.session.pc + 7 * (hit.si % 2), 0.08 * mix.perc * v, side);
-    else if (hit.kind === 'shaker') I.eShaker(at, 0.03 * mix.perc * v, side);
-    else if (hit.kind === 'ride') I.eRide(at, 0.12 * mix.perc * v, side);
-    else if (hit.kind === 'blast') I.eKitBlast(at, 0.12 * mix.perc * v, side);
+  /** Percussion between the drums, in each style's colour. */
+  function perc(t, v, si) {
+    const side = si % 4 < 2 ? -0.35 : 0.35;
+    if (id === 'rave') {
+      if (si % 3 === 0) I.eTom(t, 150 + 20 * (si % 4), 0.1 * mix.perc * v);
+      else I.ePerc(t, 'tick', 0.08 * mix.perc * v, side);
+    } else if (id === 'melodic')
+      I.ePerc(t, si % 5 === 0 ? 'conga' : 'tick', 0.07 * mix.perc * v, side);
+    else I.eShaker(t, 0.07 * mix.perc * v, side);
   }
+
+  scheduleStep.prepare = (from, to) => {
+    const ready = [];
+    for (let bar = Math.floor(from); bar <= to; bar += 8) ready.push(warm(bar));
+    return Promise.all(ready);
+  };
   return { scheduleStep };
 }

@@ -76,6 +76,8 @@ export async function renderOffline(
       audioInstruments,
     });
   audio.songStart = 0.1 - bar * 16 * audio.session.s16;
+  // The melodic loops are rendered ahead of time, as they are while the game runs.
+  await arrangements[style].prepare?.(bar, bar + bars);
   const gameAudio = createGameAudio({ audio, audioComposition, audioGraph, audioMath });
   const reactions = createAudioReactions({
     audio,

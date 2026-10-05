@@ -1,14 +1,14 @@
 import { composeGenSession, createTimeline } from './gen/timeline.js';
 import { createAudioGen } from './gen/engine.js';
-import { PROFILE_IDS } from './gen/profiles.js';
+import { STYLE_IDS } from './gen/styles.js';
 
 /**
  * One registry connects a style's composition, timeline and arrangement. Every song is generated
- * as it plays: the styles share one engine and differ only by their profile (see gen/profiles.js).
+ * as it plays: the styles share one engine and differ only by their data (see gen/styles.js).
  */
 export const SONG_STYLES = Object.freeze(
   Object.fromEntries(
-    PROFILE_IDS.map((id) => [
+    STYLE_IDS.map((id) => [
       id,
       {
         compose: (seed, tonal) => composeGenSession(id, seed, tonal),

@@ -7,19 +7,17 @@ import { createAudioReactions } from '../src/audio/reactions.js';
 import { SONG_STYLES, createArrangements } from '../src/audio/song-registry.js';
 import { TRACKS, TRACK_IDS } from '../src/audio/catalog.js';
 import { composeGenSession, createTimeline } from '../src/audio/gen/timeline.js';
-import { PROFILES, PROFILE_IDS } from '../src/audio/gen/profiles.js';
+import { STYLES, STYLE_IDS } from '../src/audio/gen/styles.js';
 import { SCALES } from '../src/audio/gen/scales.js';
 
 const SEEDS = [42, 7, 123456789];
 const timelineOf = (id, seed) => createTimeline(composeGenSession(id, seed, null));
-const plans = (timeline, from, to) =>
-  Array.from({ length: to - from }, (_, i) => timeline.plan(from + i));
 
 test('every catalog song is a generated style with a complete registration', () => {
   assert.deepEqual(TRACK_IDS, [1, 2, 3, 4]);
   assert.deepEqual(
     TRACK_IDS.map((id) => TRACKS[id].style),
-    PROFILE_IDS.length === 4 ? ['euphoria', 'rave', 'melodic', 'anthem'] : [],
+    ['euphoria', 'rave', 'melodic', 'anthem'],
   );
   const buttons = new Set();
   for (const id of TRACK_IDS) {
@@ -31,160 +29,145 @@ test('every catalog song is a generated style with a complete registration', () 
     assert.equal(typeof style.compose, 'function');
     assert.equal(typeof style.createTimeline, 'function');
     assert.equal(typeof style.createArrangement, 'function');
-    const [low, high] = PROFILES[song.style].bpm;
+    const [low, high] = STYLES[song.style].bpm;
     assert(song.bpm >= low && song.bpm <= high, `${song.name}: the listed tempo is in range`);
   }
 });
 
-for (const id of PROFILE_IDS)
-  for (const seed of SEEDS)
-    test(`${id}, seed ${seed}: the song is a pure function of its seed, whatever order it is asked in`, () => {
-      const session = composeGenSession(id, seed, null),
-        profile = PROFILES[id];
+for (const id of STYLE_IDS)
+  test(`${id}: a set is a pure function of its seed, whatever order it is asked in`, () => {
+    for (const seed of SEEDS) {
+      const session = composeGenSession(id, seed, null);
       assert.deepEqual(composeGenSession(id, seed, null), session);
-      assert(session.bpm >= profile.bpm[0] && session.bpm <= profile.bpm[1]);
-      assert(profile.keys.includes(session.pc));
-      assert(profile.scales.some(([name]) => name === session.scale));
       const forward = createTimeline(session),
         backward = createTimeline(session),
-        bars = [0, 1, 2, 3, 15, 16, 47, 63, 64, 65, 130, 255, 300];
+        bars = [0, 1, 15, 16, 63, 64, 130, 199, 200, 201, 420, 777];
       const first = bars.map((bar) => JSON.stringify(forward.plan(bar)));
-      // Asking far ahead first, and then in reverse, must change nothing.
-      backward.plan(900);
+      backward.plan(1500);
       const second = [...bars].reverse().map((bar) => JSON.stringify(backward.plan(bar)));
       assert.deepEqual(first, second.reverse());
-      const other = timelineOf(id, seed + 1);
       assert.notEqual(
-        JSON.stringify(plans(other, 0, 200)),
-        JSON.stringify(plans(forward, 0, 200)),
-        'another seed is another song',
+        JSON.stringify(timelineOf(id, seed + 1).track(0).loops),
+        JSON.stringify(forward.track(0).loops),
+        'another seed is another set',
       );
-    });
+    }
+  });
 
-for (const id of PROFILE_IDS)
-  for (const seed of SEEDS)
-    test(`${id}, seed ${seed}: sixteen-bar stretches never come back, over 512 bars`, () => {
+for (const id of STYLE_IDS)
+  test(`${id}: the set never plays the same track twice`, () => {
+    for (const seed of SEEDS) {
       const timeline = timelineOf(id, seed),
-        all = plans(timeline, 0, 512),
-        content = (list) =>
-          JSON.stringify(
-            list.map((p) => [p.kick, p.bass, p.arp, p.stab, p.lead, p.chord.notes, p.hat, p.perc]),
-          ),
-        seen = new Set();
-      for (let bar = 0; bar + 16 <= 512; bar += 4) {
-        const stretch = content(all.slice(bar, bar + 16));
-        assert(!seen.has(stretch), `${id}: bar ${bar} repeats an earlier stretch`);
-        seen.add(stretch);
+        prints = new Set();
+      let previous = null;
+      for (let index = 0; index < 16; index++) {
+        const track = timeline.track(index),
+          print = JSON.stringify([track.pc, track.loops.hookA, track.loops.bass]);
+        assert(!prints.has(print), `${id} track ${index} repeats an earlier one`);
+        prints.add(print);
+        if (previous) assert.notEqual(track.pc, previous.pc, 'every track moves to a new key');
+        previous = track;
       }
-      // The harmony keeps moving too: many different chords and several progressions.
-      const chords = new Set(all.map((p) => p.chord.notes.join()));
-      assert(chords.size >= 20, `${chords.size} distinct chords`);
-      const loops = new Set();
-      for (let p = 0; p < 512 / PROFILES[id].phraseBars; p++)
-        loops.add(
-          all
-            .slice(p * PROFILES[id].phraseBars, (p + 1) * PROFILES[id].phraseBars)
-            .map((plan) => plan.chord.deg)
-            .join(),
-        );
-      assert(loops.size >= 5, `${loops.size} distinct progressions`);
-    });
-
-for (const id of PROFILE_IDS)
-  test(`${id}: layers evolve, so a groove is never quite the same two phrases running`, () => {
-    const timeline = timelineOf(id, 42),
-      barsPer = PROFILES[id].phraseBars;
-    let changed = 0,
-      compared = 0;
-    for (let phrase = 8; phrase < 120; phrase++) {
-      const a = timeline.plan(phrase * barsPer),
-        b = timeline.plan((phrase + 1) * barsPer);
-      if (a.sec !== b.sec || !a.bass.length) continue;
-      compared++;
-      const cell = (p) => JSON.stringify([p.bass.map((n) => [n.si, n.note]), p.hat, p.perc]);
-      if (cell(a) !== cell(b)) changed++;
+      // The tracks follow each other without gaps.
+      let bar = 0;
+      for (let index = 0; index < 6; index++) {
+        const { index: found, local } = timeline.locate(bar);
+        assert.equal(found, index);
+        assert.equal(local, 0);
+        bar += timeline.track(index).length;
+      }
     }
-    assert(compared > 20);
-    assert(changed / compared > 0.8, `${changed} of ${compared} phrases changed`);
   });
 
-for (const id of PROFILE_IDS)
-  test(`${id}: the form is a valid, endless chain of sections`, () => {
-    const profile = PROFILES[id],
-      timeline = timelineOf(id, 42),
-      segments = [];
-    for (let bar = 0; bar < 1500; bar++) {
-      const section = timeline.sectionAt(bar);
-      if (!segments.length || segments.at(-1).cyc !== section.cyc) {
-        if (segments.length) assert.equal(segments.at(-1).seen, segments.at(-1).len);
-        segments.push({ ...section, seen: 0 });
-      }
-      const current = segments.at(-1);
-      assert.equal(section.bs, current.seen, 'bars count up through a section');
-      current.seen++;
-      assert(Object.hasOwn(profile.form, section.sec));
+for (const id of STYLE_IDS)
+  test(`${id}: every track is shaped like a real one`, () => {
+    const timeline = timelineOf(id, 42);
+    for (let index = 0; index < 10; index++) {
+      const track = timeline.track(index),
+        types = track.sections.map((section) => section.type);
+      assert.equal(types[0], 'INTRO');
+      assert.equal(types.at(-1), 'OUTRO');
+      assert.equal(types.filter((type) => type === 'DROP').length, 2);
+      types.forEach((type, i) => {
+        if (type === 'BUILD') assert.equal(types[i + 1], 'DROP', 'every build lands in a drop');
+      });
+      assert(track.length >= 140 && track.length <= 240, `${track.length} bars`);
+      for (const section of track.sections)
+        assert.equal(section.len % track.cycleBars, 0, 'sections hold whole loops');
+      assert.equal(track.loops.hookB.length > 0, true);
+      assert.notDeepEqual(track.loops.hookA, track.loops.hookB, 'the second drop lifts the hook');
     }
-    assert.equal(segments[0].sec, 'INTRO');
-    assert(segments.length > 30);
-    for (let i = 0; i < segments.length - 1; i++) {
-      const { sec, len } = segments[i];
-      assert(profile.form[sec].len.includes(len), `${sec} of ${len} bars`);
-      assert(i === 0 || profile.form[segments[i - 1].sec].next.some(([next]) => next === sec));
-      if (sec === 'BUILD') assert.equal(segments[i + 1].sec, 'DROP', 'every build lands in a drop');
-      if (i >= 2)
-        assert(
-          !(segments[i - 2].sec === sec && segments[i - 1].sec === sec),
-          'no section three times running',
-        );
-    }
-    const kinds = new Set(segments.map((s) => s.sec));
-    assert(['GROOVE', 'BUILD', 'DROP', 'BREAK'].every((kind) => kinds.has(kind)));
   });
 
-for (const id of PROFILE_IDS)
-  for (const seed of SEEDS)
-    test(`${id}, seed ${seed}: every note is in the key, in range and finite`, () => {
-      const session = composeGenSession(id, seed, null),
-        timeline = createTimeline(session),
-        spec = PROFILES[id].layers,
-        inKey = new Set(SCALES[session.scale].map((step) => (session.pc + step) % 12)),
-        lowest = (list) => Math.min(...list);
-      for (const plan of plans(timeline, 0, 400)) {
-        for (const note of plan.chord.notes)
-          assert(
-            inKey.has(note % 12),
-            `chord note ${note} is in ${session.kname} ${session.scale}`,
-          );
-        for (const hit of plan.bass) {
-          assert(hit.note >= spec.bass.range[0] && hit.note <= spec.bass.range[1]);
-          assert(hit.si >= 0 && hit.si < 16 && hit.vel > 0 && hit.vel <= 1);
-        }
-        for (const name of ['arp', 'lead'])
-          for (const hit of plan[name]) {
-            assert(inKey.has(hit.note % 12), `${name} note ${hit.note} is in the key`);
-            assert(hit.note >= spec[name].range[0] && hit.note <= spec[name].range[1]);
-            assert(hit.si >= 0 && hit.si < 16 && Number.isFinite(hit.len) && hit.len > 0);
+for (const id of STYLE_IDS)
+  test(`${id}: loops stay in key and in range, and hooks lean on the chords`, () => {
+    for (const seed of SEEDS) {
+      const timeline = timelineOf(id, seed),
+        style = STYLES[id];
+      for (let index = 0; index < 6; index++) {
+        const track = timeline.track(index),
+          key = new Set(SCALES[track.scale].map((step) => (track.pc + step) % 12)),
+          steps = track.cycleBars * 16,
+          chordAt = (step) => track.chords[Math.floor(step / (track.chordBars * 16))];
+        for (const [name, loop] of Object.entries(track.loops))
+          for (const note of loop) {
+            assert(note.step >= 0 && note.step < steps && note.len > 0, `${name} fits its loop`);
+            for (const pitch of note.notes || [note.note])
+              assert(key.has(pitch % 12), `${id} ${name}: ${pitch} is in the key`);
           }
-        for (const hit of plan.stab) assert(lowest(hit.notes) >= 40 && hit.si < 16);
-        for (const row of [plan.kick, plan.hat, plan.open, plan.clap, plan.snare]) {
-          assert.equal(row.length, 16);
-          assert(row.every((v) => Number.isFinite(v) && v >= 0 && v <= 1));
+        for (const note of track.loops.bass)
+          assert(note.note >= style.bassRange[0] && note.note <= style.bassRange[1] + 12);
+        let strong = 0,
+          fitting = 0;
+        for (const note of track.loops.hookA) {
+          if (note.step % 4) continue;
+          strong++;
+          const chord = chordAt(note.step);
+          if (chord.notes.some((tone) => tone % 12 === note.note % 12)) fitting++;
         }
+        assert(
+          fitting >= strong * 0.75,
+          `${fitting} of ${strong} strong hook notes are chord tones`,
+        );
       }
-    });
+    }
+  });
+
+for (const id of STYLE_IDS)
+  test(`${id}: bar plans start each loop where its layer comes in, and builds end in silence`, () => {
+    const timeline = timelineOf(id, 42),
+      track = timeline.track(0),
+      covered = {};
+    for (let bar = 0; bar < track.length; bar++) {
+      const plan = timeline.plan(bar);
+      for (const entry of plan.stems) {
+        assert(entry.bars >= 1 && entry.offset >= 0 && entry.offset < track.cycleBars);
+        assert(entry.offset + entry.bars <= track.cycleBars, 'a loop never runs past its end');
+        covered[entry.layer] = bar + entry.bars;
+      }
+      for (const name of ['bass', 'hook', 'arp', 'stab', 'pad'])
+        if (plan.on[name])
+          assert(covered[name] > bar, `${id} bar ${bar}: ${name} has a loop playing`);
+      if (plan.dropout) {
+        assert.equal(plan.sec, 'BUILD');
+        assert.equal(plan.bs, plan.len - 1);
+        for (const row of Object.values(plan.drums)) assert(row.slice(12).every((v) => v === 0));
+      }
+      if (plan.fill !== 'none') assert.equal(plan.bs % 8, 7, 'fills close a phrase');
+    }
+  });
 
 test('a long session keeps its memory bounded and any bar can be asked for at once', () => {
-  for (const id of PROFILE_IDS) {
+  for (const id of STYLE_IDS) {
     const timeline = timelineOf(id, 42);
     let biggest = 0;
-    for (let bar = 0; bar < 6000; bar++) {
+    for (let bar = 0; bar < 5000; bar++) {
       timeline.plan(bar);
       biggest = Math.max(biggest, timeline.size());
     }
-    assert(biggest < 200, `${id}: ${biggest} remembered items`);
-    const jumped = timeline.plan(40000);
-    assert.equal(jumped.bar, 40000);
-    assert(timeline.size() < 200);
+    assert(biggest < 60, `${id}: ${biggest} remembered items`);
+    assert.equal(timeline.plan(40000).bar, 40000);
+    assert(timeline.size() < 60);
   }
 });
 
@@ -221,7 +204,7 @@ test('all arrangements play a long session with finite, in-time musical events',
         audioMath: createAudioMath(audio),
       });
     const names = new Set();
-    for (let bar = 0; bar < 1024; bar++)
+    for (let bar = 0; bar < 600; bar++)
       for (let step = 0; step < 16; step++) {
         const time = (bar * 16 + step) * audio.session.s16;
         events.length = 0;
@@ -231,14 +214,13 @@ test('all arrangements play a long session with finite, in-time musical events',
           for (const argument of event.args)
             if (typeof argument === 'number') assert(Number.isFinite(argument));
           if (event.name === 'kickTuning') continue;
-          // Nothing is scheduled before its step (bar a few milliseconds of humanising) or a bar after it.
           assert(
             event.args[0] >= time - 0.01 && event.args[0] < time + audio.session.spb * 4,
             `${TRACKS[id].name}: ${event.name} at ${event.args[0]} for the step at ${time}`,
           );
         }
       }
-    for (const voice of ['eKick', 'eRoll', 'eHat', 'eClap', 'eRave', 'ePad'])
+    for (const voice of ['eKick', 'eHat', 'eClap', 'eCrash', 'eRiser', 'eImpact'])
       assert(names.has(voice), `${TRACKS[id].name} plays ${voice}`);
   }
 });

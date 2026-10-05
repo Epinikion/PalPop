@@ -1,5 +1,6 @@
 import { $ } from '../core/dom.js';
 import { TRACKS } from '../audio/catalog.js';
+const NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 export function createUiMusicMeter({ audio, uiInterface }) {
   /* ---- UI glue: only writes to the DOM when text actually changes ---- */
   const uiTxt = {};
@@ -18,7 +19,9 @@ export function createUiMusicMeter({ audio, uiInterface }) {
       section = audio.section,
       bar = audio.bar + 1,
       muted = !audio.enabled || audio.volume === 0,
-      key = S.kname + ' ' + S.mname;
+      key = audio.key
+        ? NAMES[audio.key.pc] + ' ' + audio.key.scale.toUpperCase()
+        : S.kname + ' ' + S.mname;
     setTxt(
       '#liveMixState',
       muted ? 'MUTED' : 'GENERATING \u00b7 ' + section + ' \u00b7 BAR ' + bar,

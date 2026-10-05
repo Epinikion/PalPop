@@ -128,23 +128,5 @@ export function createSupersaw({ audio, audioGraph, audioMath }) {
     audioGraph.releaseVoice(sources[0], position, sources.slice(1).concat(extra));
     audio.stemFlash.synth = 0.2;
   }
-  /** Short plucked saw chord or single note: the arpeggio sparkle of breakdowns and builds. */
-  function eSawPluck(t, notes, d, v, color = 0.6, pan = 0) {
-    superSaw(t, notes, d, v, {
-      voices: 3,
-      detune: 1.1,
-      width: 0.7,
-      hp: 260,
-      cut: [5000 + color * 3800, 700 + color * 500],
-      fall: Math.max(0.08, d * 0.9),
-      q: 1.5,
-      attack: 0.003,
-      sustain: 0.15,
-      release: 0.08,
-      pan,
-      delaySend: 0.42,
-      reverbSend: 0.14,
-    });
-  }
-  return { superSaw, eSawPluck };
+  return { superSaw };
 }

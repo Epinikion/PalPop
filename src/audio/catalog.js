@@ -12,8 +12,8 @@ const TRACKS = {
     label: 'EUPHORIC TRANCE / SIXTEENTH ARPS + SUPERSAW LEAD',
     name: 'SOLAR RUSH',
     style: 'euphoria',
-    trim: 1,
-    pump: 0.7,
+    trim: 0.9,
+    pump: 0.45,
     bpm: 156,
     description:
       'FAST, EUPHORIC HARD TRANCE: A RAW KICK, A BASS THAT ROLLS THROUGH EVERY SIXTEENTH, ARPEGGIOS THAT NEVER STOP AND A BIG MAJOR-KEY LEAD. COMPOSED AS IT PLAYS, NEVER THE SAME TWICE.',
@@ -23,8 +23,8 @@ const TRACKS = {
     label: 'HARD TECHNO / DISTORTED KICK + ROLLING BASS',
     name: 'BLACKOUT',
     style: 'rave',
-    trim: 1,
-    pump: 0.7,
+    trim: 0.62,
+    pump: 0.35,
     bpm: 145,
     description:
       'HARD, ENDLESS TECHNO: A DISTORTED KICK, A BASS THAT ROLLS THROUGH EVERY SIXTEENTH, WIDE RAVE CHORDS AND HEAVY PERCUSSION. COMPOSED AS IT PLAYS, NEVER THE SAME TWICE.',
@@ -34,8 +34,8 @@ const TRACKS = {
     label: 'MELODIC TECHNO / DEEP PADS + SLOW MELODIES',
     name: 'AFTER HOURS',
     style: 'melodic',
-    trim: 1,
-    pump: 0.6,
+    trim: 1.03,
+    pump: 0.4,
     bpm: 126,
     description:
       'DEEP, DRIVING MELODIC TECHNO: A ROUND KICK, A MOVING BASS, WIDE PADS AND LONG MELODIES THAT TURN OVER SLOWLY. COMPOSED AS IT PLAYS, NEVER THE SAME TWICE.',
@@ -45,8 +45,8 @@ const TRACKS = {
     label: 'RAVE ANTHEM / ARP RIFF + BIG BUILDS',
     name: 'RAVE ANTHEM',
     style: 'anthem',
-    trim: 1,
-    pump: 0.7,
+    trim: 1.07,
+    pump: 0.45,
     bpm: 136,
     description:
       'A CLASSIC DANCEFLOOR ANTHEM: A BRIGHT SYNTH RIFF OVER A STRAIGHT KICK, BIG BUILDS, SNARE ROLLS AND DROPS. COMPOSED AS IT PLAYS, NEVER THE SAME TWICE.',

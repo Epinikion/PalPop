@@ -2,6 +2,29 @@ import { TRACKS } from './catalog.js';
 
 /** Level at which voices enter the music bus; the master stage supplies the remaining makeup. */
 const MUSIC_INPUT_GAIN = 0.55;
+/** A dark, half-second room: what turns the kick into a rumble. */
+const rumbleImpulses = new WeakMap();
+function rumbleImpulse(context) {
+  if (!rumbleImpulses.has(context)) {
+    const rate = context.sampleRate,
+      length = Math.floor(rate * 0.9),
+      buffer = context.createBuffer(2, length, rate);
+    let seed = 12345;
+    const random = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 4294967296) * 2 - 1;
+    for (let c = 0; c < 2; c++) {
+      const data = buffer.getChannelData(c);
+      let y = 0;
+      for (let i = 0; i < length; i++) {
+        const t = i / rate;
+        y += (random() - y) * 0.02;
+        data[i] = y * Math.exp(-t / 0.22) * (t < 0.03 ? t / 0.03 : 1) * 6;
+      }
+    }
+    rumbleImpulses.set(context, buffer);
+  }
+  return rumbleImpulses.get(context);
+}
+
 /** Side-channel boost for the synth bus. Only content above ~220 Hz widens; bass stays centred. */
 const SYNTH_WIDTH = 1.2;
 
@@ -187,7 +210,7 @@ export function createAudioGraph({ audio }) {
         g.gain.setTargetAtTime(0, now, 0.05);
       }
       setTimeout(() => {
-        for (const node of [old.out, old.dl, old.rv, old.rumFB, old.rumD, ...old.extras]) {
+        for (const node of [old.out, old.dl, old.rv, old.rum, ...old.extras]) {
           try {
             node.disconnect();
           } catch (e) {}
@@ -229,24 +252,27 @@ export function createAudioGraph({ audio }) {
     sweep.frequency.value = 10;
     sweep.Q.value = 0.8;
     const widener = createWidener(audio.context, SYNTH_WIDTH);
-    /* rumble bus: kick feed into a lowpassed feedback delay - the classic rolling techno floor */
+    /* rumble: the kick through a dark, short reverb, low-passed and saturated, then ducked by the next
+       kick like the bass - the rolling floor under hard techno */
     const rum = audio.context.createGain(),
+      rumVerb = audio.context.createConvolver(),
       rumLP = audio.context.createBiquadFilter(),
-      rumD = audio.context.createDelay(1),
-      rumFB = audio.context.createGain(),
+      rumSat = audio.context.createWaveShaper(),
       rumOut = audio.context.createGain();
+    rumVerb.buffer = rumbleImpulse(audio.context);
     rumLP.type = 'lowpass';
-    rumLP.frequency.value = 115;
-    rumLP.Q.value = 1.2;
-    rumFB.gain.value = 0.55;
-    rumOut.gain.value = 0.5;
-    rumD.delayTime.value = 0.11;
-    rum.connect(rumLP);
-    rumLP.connect(rumD);
-    rumD.connect(rumFB);
-    rumFB.connect(rum);
-    rumLP.connect(rumOut);
-    rumOut.connect(out);
+    rumLP.frequency.value = 150;
+    rumLP.Q.value = 0.7;
+    const rumCurve = new Float32Array(1024);
+    for (let i = 0; i < rumCurve.length; i++)
+      rumCurve[i] = Math.tanh(((i * 2) / (rumCurve.length - 1) - 1) * 2) / Math.tanh(2);
+    rumSat.curve = rumCurve;
+    rumOut.gain.value = 1.4;
+    rum.connect(rumVerb);
+    rumVerb.connect(rumLP);
+    rumLP.connect(rumSat);
+    rumSat.connect(rumOut);
+    rumOut.connect(bass);
     dry.connect(out);
     bass.connect(duck);
     mel.connect(melLP);
@@ -263,6 +289,25 @@ export function createAudioGraph({ audio }) {
       rv = audio.context.createGain();
     dl.connect(audio.graph.dlIn);
     rv.connect(audio.graph.rvIn);
+    /* one bus per melodic layer: its filter and sends are what the arrangement automates */
+    const layers = {};
+    for (const name of ['bass', 'hook', 'arp', 'stab', 'pad']) {
+      const input = audio.context.createGain(),
+        filter = audio.context.createBiquadFilter(),
+        echo = audio.context.createGain(),
+        room = audio.context.createGain();
+      filter.type = 'lowpass';
+      filter.frequency.value = 16000;
+      filter.Q.value = name === 'bass' ? 0.8 : 0.55;
+      echo.gain.value = room.gain.value = 0;
+      input.connect(filter);
+      filter.connect(name === 'bass' ? bass : mel);
+      filter.connect(echo);
+      filter.connect(room);
+      echo.connect(dl);
+      room.connect(rv);
+      layers[name] = { input, filter, dl: echo, rv: room };
+    }
     audio.graph.song = {
       out,
       dry,
@@ -275,12 +320,27 @@ export function createAudioGraph({ audio }) {
       melLP,
       acidSh,
       rum,
-      rumD,
-      rumFB,
+      layers,
       dl,
       rv,
       sweep,
-      extras: [trim, sweep, drive, melDuck, ...widener.nodes],
+      extras: [
+        trim,
+        sweep,
+        drive,
+        melDuck,
+        rumVerb,
+        rumLP,
+        rumSat,
+        rumOut,
+        ...widener.nodes,
+        ...Object.values(layers).flatMap((layer) => [
+          layer.input,
+          layer.filter,
+          layer.dl,
+          layer.rv,
+        ]),
+      ],
     };
   }
   function feed(node, dl, rv) {

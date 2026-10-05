@@ -5,7 +5,6 @@ import { createAudioMath } from '../src/audio/math.js';
 import { createAudioGraph } from '../src/audio/graph.js';
 import { createAudioOutput } from '../src/audio/output.js';
 import { createSupersaw } from '../src/audio/instruments/supersaw.js';
-import { createSynths } from '../src/audio/instruments/synths.js';
 import { TRACKS, TRACK_IDS } from '../src/audio/catalog.js';
 import { fakeContext, reaches } from './helpers/fake-audio.js';
 
@@ -83,30 +82,4 @@ test('a driven, drifting saw stack is saturated after its filter and never the s
   assert.equal(new Set(detunes(plain)).size, 5, 'five layouts offsets, the same for both notes');
   assert(new Set(detunes(driven)).size > 5, 'drift makes every oscillator its own');
   for (const cents of detunes(driven)) assert(Math.abs(cents) < 23 * 1 + 3 + 1e-9);
-});
-
-test('the four melodic voices are saturated, drifting saw stacks held past their step', () => {
-  const context = fakeContext(),
-    song = { mel: context.createGain(), bass: context.createGain() },
-    audio = { context, graph: { song }, stemFlash: {} },
-    cleanups = [],
-    synths = createSynths({
-      audio,
-      audioMath: createAudioMath({ seed: 1 }),
-      audioGraph: { feed() {}, releaseVoice: (...args) => cleanups.push(args) },
-    });
-  const shapers = () => context.nodes.filter((node) => node.kind === 'shaper').length;
-  synths.eStab(2, [60, 64, 67], 0.05, true);
-  assert.equal(shapers(), 1);
-  synths.ePluck(3, 72, 0.05, -0.3, 0.17);
-  assert.equal(shapers(), 2);
-  synths.eLead(4, 69, 0.4, 0.08);
-  assert.equal(shapers(), 3);
-  synths.ePad(5, [60, 64, 67], 4, 0.07, true);
-  assert.equal(shapers(), 4);
-  assert.equal(cleanups.length, 4);
-  for (const [source, outlet] of cleanups) assert(reaches(outlet, song.mel) && source.startTime);
-  // The pad swells in slowly and stays: its longest oscillator outlives the note.
-  const pad = context.nodes.filter((node) => node.kind === 'oscillator').slice(-15);
-  assert(pad.every((node) => node.endTime > 5 + 4));
 });

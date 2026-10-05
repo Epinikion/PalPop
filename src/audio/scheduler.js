@@ -126,8 +126,6 @@ export function createAudioScheduler({
     const t = audio.context.currentTime + 0.08,
       S = audio.session;
     audio.graph.dA.delayTime.value = audio.graph.dB.delayTime.value = S.spb * 0.75;
-    if (audio.graph.song && audio.graph.song.rumD)
-      audio.graph.song.rumD.delayTime.value = Math.min(0.9, S.s16 * 2);
     audio.graph.song.out.gain.setValueAtTime(0, audio.context.currentTime);
     audio.graph.song.out.gain.linearRampToValueAtTime(1, t + 0.18);
     audio.songStart = t;
@@ -135,6 +133,7 @@ export function createAudioScheduler({
     audio.step = 0;
     audio.bar = 0;
     audio.section = 'INTRO';
+    audio.key = null;
     audio.playing = {
       live: true,
     };

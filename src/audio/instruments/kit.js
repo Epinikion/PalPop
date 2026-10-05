@@ -116,12 +116,13 @@ export function createKit({ audio, audioGraph, audioMath }) {
     if (duck > 0) {
       const song = audio.graph.song,
         d = song.duck.gain;
-      d.setValueAtTime(1 - duck, t);
-      d.setTargetAtTime(1, t + 0.012, 0.075);
+      // A 3 ms glide down instead of a jump: a step in the level of a held sound is heard as a click.
+      d.setTargetAtTime(1 - duck, t, 0.0012);
+      d.setTargetAtTime(1, t + 0.02, 0.075);
       if (song.melDuck) {
         const share = duck * (song.pump ?? 1);
-        song.melDuck.gain.setValueAtTime(1 - share, t);
-        song.melDuck.gain.setTargetAtTime(1, t + 0.012, 0.075);
+        song.melDuck.gain.setTargetAtTime(1 - share, t, 0.0012);
+        song.melDuck.gain.setTargetAtTime(1, t + 0.02, 0.075);
       }
     }
     audio.stemFlash.kick = 0.16;
