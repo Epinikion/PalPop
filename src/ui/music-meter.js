@@ -1,7 +1,5 @@
 import { $ } from '../core/dom.js';
 import { TRACKS } from '../audio/catalog.js';
-import { TIERS } from '../config.js';
-import { sungGlow } from '../render/sung.js';
 const NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 export function createUiMusicMeter({ audio, uiInterface }) {
   /* ---- UI glue: only writes to the DOM when text actually changes ---- */
@@ -45,17 +43,6 @@ export function createUiMusicMeter({ audio, uiInterface }) {
           ' \u00b7 ' +
           (muted ? 'MUTED' : section + ' \u00b7 BAR ' + bar),
       );
-    // The evolution chain lights the pals the song is singing about.
-    const context = audio.context,
-      sung =
-        audio.enabled && audio.palCues?.length
-          ? sungGlow(
-              audio.palCues,
-              context.currentTime - (context.outputLatency || context.baseLatency || 0),
-              TIERS.length,
-            )
-          : null;
-    uiInterface.markSung?.((i) => sung && sung.glow[i] > 0.25);
     if (!stemEls) stemEls = [...document.querySelectorAll('#stemMeter [data-stem]')];
     for (const el of stemEls)
       el.classList.toggle('on', audio.enabled && audio.stemFlash[el.dataset.stem] > 0);

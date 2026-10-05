@@ -2,7 +2,7 @@
 /* BUILD changes with every version of the app (npm run cache:update writes it). It makes this file
    differ byte for byte, so a browser always notices an update, and it is part of the precache URL, so
    a stale copy of the list can never be served from an HTTP cache. */
-const BUILD = '3d6ea1a21de27f97';
+const BUILD = '9a4c893e02099925';
 importScripts('./precache.js?v=' + BUILD);
 const PREFIX = 'palpop-';
 const CACHE = PREFIX + CACHE_VERSION;

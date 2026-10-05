@@ -85,16 +85,6 @@ export function createUiInterface({
       }
     });
   }
-  /** Lights the chips of the pals whose names the song is singing. */
-  function markSung(isSung) {
-    chips.forEach((ch, i) => {
-      const on = !!isSung(i);
-      if (ch.sung !== on) {
-        ch.sung = on;
-        ch.d.classList.toggle('sung', on);
-      }
-    });
-  }
   /* ---- game-over summary: records, daily result and quests ---- */
   const line = (parent, className, text) => {
     const row = document.createElement('div');
@@ -543,7 +533,6 @@ export function createUiInterface({
     renderRadio,
     radio,
     drawLadder,
-    markSung,
     blitFit,
     get dpr() {
       return dpr;
