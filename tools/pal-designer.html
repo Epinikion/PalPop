@@ -570,7 +570,7 @@
             n: 'Hootie',
             r: 20,
             m: 4,
-            ramp: ['#3a1f10', '#7a4a2a', '#a8693a', '#d39a5e', '#f6d4a4'],
+            ramp: ['#151a4d', '#2b3a94', '#4766d1', '#8ea8f5', '#e8eeff'],
           },
           {
             n: 'Bolt',
@@ -582,7 +582,7 @@
             n: 'Drako',
             r: 25,
             m: 6,
-            ramp: ['#4a0a18', '#b01e30', '#e8443c', '#ff8a6a', '#ffdcc4'],
+            ramp: ['#0a3440', '#12707e', '#20a8a6', '#7ae0d0', '#e4fff8'],
           },
           {
             n: 'Solis',
@@ -720,7 +720,7 @@
             eye1(cx, cy, rx, ry, col);
             eye1(-1 - cx, cy, rx, ry, col);
           };
-          function body(rad, rp, ox, oy) {
+          function body(rad, rp, ox, oy, keep) {
             ox = ox || 0;
             oy = oy || 0;
             const R = Math.ceil(rad) + 2;
@@ -730,6 +730,7 @@
                   dy = y + 0.5 - oy,
                   d = Math.hypot(dx, dy);
                 if (d > rad) continue;
+                if (keep && !keep(x, y)) continue;
                 let col;
                 if (d > rad - 1.05) col = rp[0];
                 else {
@@ -841,37 +842,43 @@
               mrect(10, 3, 3, 2, '#ff8fc0');
               break;
             case 7: {
-              // Hootie - owl
-              mtri2([3, -19], [13, -15], [9, -24], ramp[1], ramp[0], ramp[3]);
+              // Hootie - night owl: indigo, a heart-shaped face, wings tucked in, two stars of the night
+              mtri2([5, -17], [12, -14], [13, -23], ramp[2], ramp[0], ramp[3]);
               body(r, ramp);
-              ell(15.5, 4, 3.3, 9, ramp[1], ramp[0]);
-              ell(-15.5, 4, 3.3, 9, ramp[1], ramp[0]);
-              ell(0, 10, 10.5, 8.5, ramp[3]);
-              for (let j = 0; j < 4; j++) {
-                const y = 5 + j * 4;
-                for (let x = -8 + (j % 2) * 2; x <= 7; x += 4) {
-                  const ex = x / 10.5,
-                    ey = (y - 10) / 8.5;
-                  if (ex * ex + ey * ey < 0.8) {
-                    px(x, y, ramp[2]);
-                    px(x + 1, y + 1, ramp[2]);
-                    px(x + 2, y, ramp[2]);
-                  }
-                }
+              ell(16.5, 5, 3.4, 9, ramp[1], ramp[0]);
+              ell(-16.5, 5, 3.4, 9, ramp[1], ramp[0]);
+              ell(0, 11, 9.5, 7.5, ramp[3]);
+              for (const [x, y] of [
+                [-5, 8],
+                [2, 8],
+                [-2, 12],
+                [5, 12],
+                [-6, 14],
+                [1, 15],
+              ]) {
+                px(x, y, ramp[2]);
+                px(x + 1, y + 1, ramp[2]);
+                px(x + 2, y, ramp[2]);
               }
-              disc(7, -5, 6.6, ramp[4], D);
-              disc(-7, -5, 6.6, ramp[4], D);
-              disc(7, -5, 3.7, '#ffb42a', '#a85a10');
-              disc(-7, -5, 3.7, '#ffb42a', '#a85a10');
-              ell(6.5, -5, 1.7, 2.3, D);
-              ell(-7.5, -5, 1.7, 2.3, D);
-              px(5, -7, '#fff');
-              px(5, -6, '#fff');
-              px(-8, -7, '#fff');
-              px(-8, -6, '#fff');
-              mrect(12, 1, 3, 2, '#ff9aa8');
-              tri([-3, -1], [3, -1], [0, 7], '#7a3a08');
-              tri([-2, 0], [2, 0], [0, 5], '#ffb02a');
+              disc(6.5, -4, 7.2, '#fff4dc', '#e6c48e');
+              disc(-6.5, -4, 7.2, '#fff4dc', '#e6c48e');
+              ell(0, -1, 9, 6, '#fff4dc');
+              meye(6, -4, 2.4, 3.1);
+              tri([-3, -1], [3, -1], [0, 5], '#a85410');
+              tri([-2, 0], [2, 0], [0, 4], '#ffb02a');
+              mrect(11, 0, 3, 2, '#ff9ab8');
+              mrect(4, 19, 2, 2, '#ffb02a');
+              mrect(7, 19, 2, 2, '#ffb02a');
+              for (const [x, y] of [
+                [-17, -16],
+                [18, -9],
+              ]) {
+                px(x, y, '#fff3a8');
+                px(x - 1, y, '#fff3a8');
+                px(x + 1, y, '#fff3a8');
+                px(x, y - 1, '#fff3a8');
+                px(x, y + 1, '#fff3a8');
+              }
               break;
             }
             case 8: // Bolt - robot
@@ -896,81 +903,61 @@
               rect(-6, 14, 12, 1, ramp[1]);
               break;
             case 9: {
-              // Drako - friendly round dragon: scalloped bat wings, swept horns, golden slit eyes, spade tail
-              const poly = (pts, col) => {
-                let y0 = 1e9,
-                  y1 = -1e9;
-                for (const p of pts) {
-                  if (p[1] < y0) y0 = p[1];
-                  if (p[1] > y1) y1 = p[1];
-                }
-                for (let y = Math.floor(y0); y <= Math.ceil(y1); y++) {
-                  const yy = y + 0.5,
-                    xc = [];
-                  for (let k = 0; k < pts.length; k++) {
-                    const a = pts[k],
-                      b = pts[(k + 1) % pts.length];
-                    if ((a[1] <= yy && b[1] > yy) || (b[1] <= yy && a[1] > yy))
-                      xc.push(a[0] + ((yy - a[1]) / (b[1] - a[1])) * (b[0] - a[0]));
+              // Drako - a little ringed planet with cloud bands and a moon of its own
+              const ring = (front) => {
+                for (let y = -6; y <= 14; y++)
+                  for (let x = -31; x <= 30; x++) {
+                    // tilted a little, rising to the right
+                    const tx = x + 0.5,
+                      ty = y + 0.5 - 4 + tx * 0.12,
+                      e = (tx / 30.5) ** 2 + (ty / 7.5) ** 2;
+                    if (e > 1 || e < 0.5 || ty > 0 !== front) continue;
+                    if (!front && Math.hypot(tx, y + 0.5) < r) continue;
+                    px(
+                      x,
+                      y,
+                      e > 0.93
+                        ? '#a8543a'
+                        : e < 0.57
+                          ? '#c8683e'
+                          : e < 0.74
+                            ? '#ffd6a8'
+                            : '#ffa86a',
+                    );
                   }
-                  xc.sort((p, q) => p - q);
-                  for (let k = 0; k + 1 < xc.length; k += 2)
-                    for (let x = Math.ceil(xc[k] - 0.5); x <= Math.floor(xc[k + 1] - 0.5); x++)
-                      px(x, y, col);
-                }
               };
-              const mpoly = (pts, col) => {
-                poly(pts, col);
-                poly(
-                  pts.map((p) => [-1 - p[0], p[1]]),
-                  col,
-                );
-              };
-              line(12, 15, 19, 21, ramp[0]);
-              line(13, 14, 20, 20, ramp[0]);
-              line(12, 16, 19, 22, ramp[0]);
-              line(19, 21, 25, 19, ramp[0]);
-              line(20, 20, 26, 18, ramp[0]);
-              line(19, 22, 25, 20, ramp[0]);
-              tri2([23, 14], [31, 18], [22, 23], '#b01e30', '#4a0a18');
-              mpoly(
-                [
-                  [12, -16],
-                  [30, -28],
-                  [29, -14],
-                  [25, -15],
-                  [26, -6],
-                  [21, -8],
-                  [16, -4],
-                ],
-                ramp[2],
-              );
-              mline(12, -16, 30, -28, ramp[0]);
-              mline(13, -17, 29, -27, ramp[3]);
-              mline(30, -28, 26, -6, ramp[0]);
-              mline(30, -28, 16, -4, ramp[0]);
-              mline(30, -28, 26, -6, ramp[0]);
-              mline(30, -28, 16, -4, ramp[0]);
-              mtri2([6, -24], [12, -21], [18, -30], '#ffe9c8', '#7a3a1a');
-              tri2([-3, -24], [3, -24], [0, -31], '#ffd9a0', '#7a3a1a');
+              ring(false);
               body(r, ramp);
-              for (let y = 5; y <= 23; y++)
-                for (let x = -11; x <= 10; x++) {
-                  const ex = (x + 0.5) / 10.5,
-                    ey = (y + 0.5 - 13.5) / 9;
-                  if (ex * ex + ey * ey > 1) continue;
-                  px(x, y, y % 3 === 2 ? '#e8a86a' : '#ffd9a0');
+              for (let x = -24; x <= 23; x++)
+                for (const [y0, c] of [
+                  [-15, ramp[3]],
+                  [-10, ramp[3]],
+                  [16, ramp[1]],
+                  [20, ramp[1]],
+                ]) {
+                  const y = y0 + Math.round(Math.sin(x * 0.35 + y0));
+                  if (Math.hypot(x + 0.5, y + 0.5) < r - 1.5) {
+                    px(x, y, c);
+                    px(x, y + 1, c);
+                  }
                 }
-              ell(8, 22, 4.2, 2.8, ramp[3], ramp[0]);
-              ell(-8, 22, 4.2, 2.8, ramp[3], ramp[0]);
-              meye(6, -9, 2.2, 2.8);
-              mrect(10, -3, 3, 2, '#ff8a7a');
-              mx(2, -4, ramp[0]);
-              smile(6, 1, '#7a1a28');
-              px(3, 2, '#fff');
-              px(3, 3, '#fff');
-              px(-4, 2, '#fff');
-              px(-4, 3, '#fff');
+              ring(true);
+              meye(7, -6, 2.6, 3.2);
+              smile(4, 0, D);
+              mrect(12, -3, 3, 2, '#ff9ab8');
+              disc(-24, -21, 3.4, '#d9dcef', '#8a8fb0');
+              px(-25, -22, '#a6aac8');
+              px(-23, -20, '#a6aac8');
+              for (const [x, y, c] of [
+                [24, -22, '#fffdf0'],
+                [-28, 12, '#ffe45c'],
+              ]) {
+                px(x, y, c);
+                px(x - 1, y, c);
+                px(x + 1, y, c);
+                px(x, y - 1, c);
+                px(x, y + 1, c);
+              }
               break;
             }
             case 10: {
@@ -1178,13 +1165,11 @@
                 mx(7, -4, D);
                 break;
               case 7:
-                disc(7, -5, 6.6, ramp[2], ramp[0]);
-                disc(-7, -5, 6.6, ramp[2], ramp[0]);
-                mrect(2, -5, 10, 1, D);
-                mx(2, -6, D);
-                mx(11, -6, D);
-                tri([-3, -1], [3, -1], [0, 7], '#7a3a08');
-                tri([-2, 0], [2, 0], [0, 5], '#ffb02a');
+                ell(6, -4, 2.8, 3.5, '#fff4dc');
+                ell(-7, -4, 2.8, 3.5, '#fff4dc');
+                mrect(5, -4, 2, 1, D);
+                mx(4, -3, D);
+                mx(7, -3, D);
                 break;
               case 8:
                 mrect(4, -7, 3, 4, '#0c2233');
@@ -1193,11 +1178,15 @@
                 mx(6, -5, '#4dffb0');
                 break;
               case 9:
-                ell(6, -9, 2.6, 3.2, ramp[2]);
-                ell(-7, -9, 2.6, 3.2, ramp[2]);
-                mrect(5, -10, 2, 1, D);
-                mx(4, -9, D);
-                mx(7, -9, D);
+                // the planet's own shading where the eyes were, then closed eyes
+                body(r, ramp, 0, 0, (x, y) =>
+                  [7, -8].some(
+                    (cx) => ((x + 0.5 - cx) / 2.6) ** 2 + ((y + 0.5 + 6) / 3.2) ** 2 <= 1,
+                  ),
+                );
+                mrect(6, -6, 2, 1, D);
+                mx(5, -5, D);
+                mx(8, -5, D);
                 break;
               case 10:
                 ell(9, -4, 2.6, 3.2, ramp[2]);

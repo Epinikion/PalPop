@@ -11,7 +11,7 @@ export const BADGES = [
   tier('tabby', 'TABBY TIME', 4, 'EVOLVE A TABBY'),
   tier('panda', 'PANDA PARTY', 5, 'EVOLVE A PANDI'),
   tier('owl', 'OWL ORDER', 7, 'EVOLVE A HOOTIE'),
-  tier('dragon', 'DRAGON DAYS', 9, 'EVOLVE A DRAKO'),
+  tier('dragon', 'ORBIT CLUB', 9, 'EVOLVE A DRAKO'),
   tier('solis', 'SUN SEEKER', 10, 'EVOLVE A SOLIS'),
   { id: 'burst', name: 'SUN BURST', hint: 'CREATE THE SUN', goal: 1, value: (s) => s.suns },
   { id: 'king', name: 'SUN KING', hint: 'CREATE THE SUN 5 TIMES', goal: 5, value: (s) => s.suns },

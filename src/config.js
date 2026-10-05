@@ -97,7 +97,7 @@ const TIERS = [
     n: 'Hootie',
     r: 20,
     m: 4,
-    ramp: ['#3a1f10', '#7a4a2a', '#a8693a', '#d39a5e', '#f6d4a4'],
+    ramp: ['#151a4d', '#2b3a94', '#4766d1', '#8ea8f5', '#e8eeff'],
   },
   {
     n: 'Bolt',
@@ -109,7 +109,7 @@ const TIERS = [
     n: 'Drako',
     r: 25,
     m: 6,
-    ramp: ['#4a0a18', '#b01e30', '#e8443c', '#ff8a6a', '#ffdcc4'],
+    ramp: ['#0a3440', '#12707e', '#20a8a6', '#7ae0d0', '#e4fff8'],
   },
   {
     n: 'Solis',
